@@ -24,8 +24,8 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
     ui.separator();
     ui.add_space(20.0);
 
-    let available_width = ui.available_width();
-    let form_width = (available_width * 0.55).min(520.0);
+    let available_width = ui.available_width().max(300.0);
+    let form_width = (available_width * 0.55).clamp(280.0, 520.0);
 
     ui.vertical_centered(|ui| {
         ui.set_max_width(form_width);
@@ -109,7 +109,7 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
                 )
                 .fill(if can_create { theme::ACCENT_BRONZE } else { theme::BG_CARD_HOVER })
                 .corner_radius(theme::button_rounding())
-                .min_size(Vec2::new(f32::INFINITY, 42.0));
+                .min_size(Vec2::new(0.0, 42.0));
 
                 if ui.add_enabled(can_create, create_btn).clicked() {
                     app.create_tournament();

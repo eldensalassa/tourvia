@@ -25,6 +25,7 @@ pub enum TournamentTab {
     Participants,
     Bracket,
     Standings,
+    Scoreboard,
 }
 
 #[derive(Debug, Clone)]
@@ -61,6 +62,7 @@ pub struct TourviaApp {
     // Score input (Modal)
     pub show_match_modal: bool,
     pub score_input: [String; 2],
+    pub score_submitted: bool,
 
     // Status message
     pub status_message: Option<(String, MessageType)>,
@@ -107,6 +109,7 @@ impl TourviaApp {
             new_participant_name: String::new(),
             show_match_modal: false,
             score_input: [String::new(), String::new()],
+            score_submitted: false,
             status_message: None,
             search_query: String::new(),
             confirm_delete: None,
@@ -148,6 +151,7 @@ impl TourviaApp {
             self.selected_match = None;
             self.show_match_modal = false;
             self.score_input = [String::new(), String::new()];
+            self.score_submitted = false;
             self.bracket_zoom = 1.0;
             self.load_tournament_data(&tournament.id);
         }
@@ -526,22 +530,34 @@ impl TourviaApp {
 
         match match_service::submit_score(&self.db, &match_id, s1, s2) {
             Ok(_) => {
-                if let Some(ref tournament) = self.active_tournament {
-                    let tid = tournament.id.clone();
-                    self.load_tournament_data(&tid);
-
-                    if let Ok(true) = match_service::is_tournament_complete(&self.db, &tid) {
-                        let _ = tournament_service::update_status(&self.db, &tid, TournamentStatus::Completed);
-                        if let Ok(Some(t)) = self.db.get_tournament(&tid) { self.active_tournament = Some(t); }
-                        self.refresh_tournaments();
-                    }
+                // Update skor di self.matches secara lokal supaya live card
+                // langsung menampilkan skor baru — TANPA reload (biar card tidak hilang dulu)
+                if let Some(m) = self.matches.iter_mut().find(|m| m.id == match_id) {
+                    m.score1 = s1;
+                    m.score2 = s2;
                 }
                 self.status_message = Some(("Score submitted!".to_string(), MessageType::Success));
-                self.score_input = [String::new(), String::new()];
-                self.show_match_modal = false; // Close modal on success
+                // Tidak reload, tidak auto-advance — tunggu user klik "Next Match"
             }
             Err(e) => {
                 self.status_message = Some((e, MessageType::Error));
+            }
+        }
+    }
+
+    pub fn advance_to_next_match(&mut self) {
+        self.score_input = [String::new(), String::new()];
+        self.show_match_modal = false;
+        self.selected_match = None;
+        self.score_submitted = false;
+        // Baru di sini reload data lengkap — match selesai hilang dari live, next match muncul
+        if let Some(ref tournament) = self.active_tournament {
+            let tid = tournament.id.clone();
+            self.load_tournament_data(&tid);
+            if let Ok(true) = match_service::is_tournament_complete(&self.db, &tid) {
+                let _ = tournament_service::update_status(&self.db, &tid, TournamentStatus::Completed);
+                if let Ok(Some(t)) = self.db.get_tournament(&tid) { self.active_tournament = Some(t); }
+                self.refresh_tournaments();
             }
         }
     }
@@ -636,6 +652,7 @@ impl eframe::App for TourviaApp {
                                 (TournamentTab::Participants, "Participants"),
                                 (TournamentTab::Bracket, "Bracket"),
                                 (TournamentTab::Standings, "Standings"),
+                                (TournamentTab::Scoreboard, "Scoreboard"),
                             ];
 
                             for (tab, label) in tabs {
@@ -692,6 +709,9 @@ impl eframe::App for TourviaApp {
                             }
                             TournamentTab::Standings => {
                                 ui::stats_panel::render(self, ui);
+                            }
+                            TournamentTab::Scoreboard => {
+                                ui::scoreboard_panel::render(self, ui);
                             }
                         }
                     });

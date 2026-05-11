@@ -12,7 +12,7 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
         ui.label(theme::heading_text("🏆 Tournament Dashboard"));
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
             let btn = egui::Button::new(
-                RichText::new("＋ New Tournament")
+                RichText::new("+ New Tournament")
                     .color(theme::BG_DARK)
                     .strong()
                     .size(14.0),
@@ -213,7 +213,7 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
 
                             // Open button
                             let open_btn = egui::Button::new(
-                                RichText::new("Open →")
+                                RichText::new("Open")
                                     .size(13.0)
                                     .color(theme::ACCENT_BRONZE)
                                     .strong(),
@@ -257,6 +257,6 @@ fn empty_state(ui: &mut Ui) {
         ui.add_space(8.0);
         ui.label(theme::label_text("Create your first tournament to get started!"));
         ui.add_space(4.0);
-        ui.label(theme::small_text("Click the '＋ New Tournament' button above"));
+        ui.label(theme::small_text("Click the '+ New Tournament' button above"));
     });
 }

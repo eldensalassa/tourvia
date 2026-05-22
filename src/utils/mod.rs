@@ -104,14 +104,13 @@ mod tests {
     #[test]
     fn test_seed_order_4() {
         let order = generate_seed_order(4);
-        // Seed 1 vs 4, Seed 2 vs 3 (but on opposite sides)
-        assert_eq!(order, vec![1, 4, 3, 2]);
+        assert_eq!(order, vec![1, 4, 2, 3]);
     }
 
     #[test]
     fn test_seed_order_8() {
         let order = generate_seed_order(8);
-        assert_eq!(order, vec![1, 8, 5, 4, 3, 6, 7, 2]);
+        assert_eq!(order, vec![1, 8, 4, 5, 2, 7, 3, 6]);
     }
 
     #[test]

@@ -1,4 +1,4 @@
-use egui::{self, Ui, RichText, Vec2, Color32, Stroke};
+use egui::{self, Ui, RichText, Vec2, Color32};
 
 use crate::app::TourviaApp;
 use crate::ui::theme;
@@ -85,79 +85,89 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui, ctx: &egui::Context) {
         .fill(theme::BG_PANEL)
         .stroke(theme::card_stroke())
         .corner_radius(theme::card_rounding())
+        .inner_margin(egui::Margin::same(16))
         .show(ui, |ui| {
-            // Header
-            egui::Frame::new()
-                .fill(theme::BG_ELEVATED)
-                .inner_margin(egui::Margin::symmetric(16, 12))
-                .show(ui, |ui| {
-                    ui.horizontal(|ui| {
-                        ui.allocate_ui_with_layout(Vec2::new(50.0, 16.0), egui::Layout::left_to_right(egui::Align::Center), |ui| { ui.label(theme::label_text("Seed")); });
-                        ui.allocate_ui_with_layout(Vec2::new(40.0, 16.0), egui::Layout::left_to_right(egui::Align::Center), |ui| { ui.label(theme::label_text("Logo")); });
-                        ui.allocate_ui_with_layout(Vec2::new(300.0, 16.0), egui::Layout::left_to_right(egui::Align::Center), |ui| { ui.label(theme::label_text("Participant Name")); });
-                        if is_draft {
-                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| { ui.label(theme::label_text("Actions")); });
-                        }
-                    });
-                });
+            let mut table = egui_extras::TableBuilder::new(ui)
+                .striped(true)
+                .resizable(false)
+                .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
+                .column(egui_extras::Column::exact(60.0))          // Seed
+                .column(egui_extras::Column::exact(50.0))          // Logo
+                .column(egui_extras::Column::remainder().at_least(200.0)); // Name
+                
+            if is_draft {
+                table = table.column(egui_extras::Column::exact(220.0)); // Actions
+            }
+            
+            table = table.min_scrolled_height(0.0);
 
-            // Rows
-            let participants = app.participants.clone();
-            let count = participants.len();
-
-            egui::ScrollArea::vertical().show(ui, |ui| {
+            table.header(30.0, |mut header| {
+                header.col(|ui| { ui.label(theme::label_text("Seed")); });
+                header.col(|ui| { ui.label(theme::label_text("Logo")); });
+                header.col(|ui| { ui.label(theme::label_text("Participant Name")); });
+                if is_draft {
+                    header.col(|ui| { ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| { ui.label(theme::label_text("Actions")); }); });
+                }
+            })
+            .body(|mut body| {
+                let participants = app.participants.clone();
+                let count = participants.len();
+                
                 for (idx, p) in participants.iter().enumerate() {
-                    let bg = if idx % 2 == 0 { theme::BG_PANEL } else { theme::BG_CARD };
-                    egui::Frame::new()
-                        .fill(bg)
-                        .inner_margin(egui::Margin::symmetric(16, 8))
-                        .show(ui, |ui| {
-                            ui.horizontal(|ui| {
-                                // Seed
-                                ui.allocate_ui_with_layout(Vec2::new(50.0, 32.0), egui::Layout::left_to_right(egui::Align::Center), |ui| {
-                                    ui.label(RichText::new(format!("#{}", p.seed)).color(theme::TEXT_MUTED));
-                                });
+                    body.row(42.0, |mut row| {
+                        // Seed
+                        row.col(|ui| {
+                            ui.label(RichText::new(format!("#{}", p.seed)).color(theme::TEXT_MUTED).size(15.0));
+                        });
 
-                                // Logo
-                                ui.allocate_ui_with_layout(Vec2::new(40.0, 32.0), egui::Layout::left_to_right(egui::Align::Center), |ui| {
-                                    if let Some(tex) = app.logo_textures.get(&p.id) {
-                                        ui.add(egui::Image::new(tex).fit_to_exact_size(Vec2::new(28.0, 28.0)).corner_radius(4));
-                                    } else {
-                                        ui.label(RichText::new("—").color(theme::TEXT_MUTED));
+                        // Logo
+                        row.col(|ui| {
+                            if let Some(tex) = app.logo_textures.get(&p.id) {
+                                ui.add(egui::Image::new(tex).fit_to_exact_size(Vec2::new(32.0, 32.0)).corner_radius(4));
+                            } else {
+                                ui.label(RichText::new("—").color(theme::TEXT_MUTED));
+                            }
+                        });
+
+                        // Name
+                        row.col(|ui| {
+                            ui.label(RichText::new(&p.name).color(theme::TEXT_PRIMARY).size(15.0).strong());
+                        });
+
+                        // Actions
+                        if is_draft {
+                            row.col(|ui| {
+                                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                    if ui.add(egui::Button::new(RichText::new("🗑").color(theme::ERROR)).fill(Color32::TRANSPARENT)).clicked() {
+                                        app.delete_participant(idx);
                                     }
-                                });
 
-                                // Name
-                                ui.allocate_ui_with_layout(Vec2::new(300.0, 32.0), egui::Layout::left_to_right(egui::Align::Center), |ui| {
-                                    ui.label(RichText::new(&p.name).color(theme::TEXT_PRIMARY).size(14.0));
-                                });
+                                    if ui.add(egui::Button::new("📷 Logo").fill(theme::BG_CARD)).clicked() {
+                                        app.import_logo_for_participant(idx, ctx);
+                                    }
 
-                                // Actions
-                                if is_draft {
-                                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                        if ui.add(egui::Button::new(RichText::new("🗑").color(theme::ERROR)).fill(Color32::TRANSPARENT)).clicked() {
-                                            app.delete_participant(idx);
-                                        }
-
-                                        if ui.add(egui::Button::new("📷 Logo").fill(theme::BG_CARD)).clicked() {
-                                            app.import_logo_for_participant(idx, ctx);
+                                    ui.horizontal(|ui| {
+                                        let btn_size = Vec2::new(28.0, 24.0);
+                                        if idx > 0 {
+                                            if ui.add_sized(btn_size, egui::Button::new("▲").fill(theme::BG_CARD)).clicked() {
+                                                app.move_participant_up(idx);
+                                            }
+                                        } else {
+                                            ui.allocate_exact_size(btn_size, egui::Sense::hover());
                                         }
 
                                         if idx < count - 1 {
-                                            if ui.add(egui::Button::new("▼").fill(theme::BG_CARD)).clicked() {
+                                            if ui.add_sized(btn_size, egui::Button::new("▼").fill(theme::BG_CARD)).clicked() {
                                                 app.move_participant_down(idx);
                                             }
-                                        }
-
-                                        if idx > 0 {
-                                            if ui.add(egui::Button::new("▲").fill(theme::BG_CARD)).clicked() {
-                                                app.move_participant_up(idx);
-                                            }
+                                        } else {
+                                            ui.allocate_exact_size(btn_size, egui::Sense::hover());
                                         }
                                     });
-                                }
+                                });
                             });
-                        });
+                        }
+                    });
                 }
             });
         });

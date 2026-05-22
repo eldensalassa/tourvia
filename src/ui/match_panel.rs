@@ -1,4 +1,4 @@
-use egui::{self, RichText, Vec2, Color32, Stroke};
+use egui::{self, RichText, Vec2};
 
 use crate::app::TourviaApp;
 use crate::domain::match_model::MatchStatus;
@@ -39,15 +39,24 @@ pub fn render_modal(app: &mut TourviaApp, ctx: &egui::Context) {
                     let w2 = m.winner_id.is_some() && m.player2_id == m.winner_id;
 
                     // VS Layout
+                    let width = ui.available_width();
+                    let p_width = 140.0;
+                    let vs_width = 40.0;
+                    let total_w = p_width * 2.0 + vs_width;
+                    let padding = (width - total_w) / 2.0;
+                    
                     ui.horizontal(|ui| {
-                        ui.vertical_centered(|ui| {
-                            ui.set_width(120.0);
+                        ui.add_space(padding.max(0.0));
+                        
+                        ui.allocate_ui_with_layout(Vec2::new(p_width, 100.0), egui::Layout::top_down(egui::Align::Center), |ui| {
                             if let Some(ref id) = m.player1_id {
                                 if let Some(tex) = app.logo_textures.get(id) {
                                     ui.add(egui::Image::new(tex).fit_to_exact_size(Vec2::new(48.0, 48.0)).corner_radius(8));
                                 } else {
                                     ui.add_space(48.0);
                                 }
+                            } else {
+                                ui.add_space(48.0);
                             }
                             ui.add_space(8.0);
                             ui.label(RichText::new(&p1).size(15.0).color(if w1 { theme::SUCCESS } else { theme::TEXT_PRIMARY }).strong());
@@ -56,20 +65,20 @@ pub fn render_modal(app: &mut TourviaApp, ctx: &egui::Context) {
                             }
                         });
 
-                        ui.vertical_centered(|ui| {
-                            ui.set_width(40.0);
+                        ui.allocate_ui_with_layout(Vec2::new(vs_width, 100.0), egui::Layout::top_down(egui::Align::Center), |ui| {
                             ui.add_space(20.0);
                             ui.label(RichText::new("VS").size(14.0).color(theme::TEXT_MUTED));
                         });
 
-                        ui.vertical_centered(|ui| {
-                            ui.set_width(120.0);
+                        ui.allocate_ui_with_layout(Vec2::new(p_width, 100.0), egui::Layout::top_down(egui::Align::Center), |ui| {
                             if let Some(ref id) = m.player2_id {
                                 if let Some(tex) = app.logo_textures.get(id) {
                                     ui.add(egui::Image::new(tex).fit_to_exact_size(Vec2::new(48.0, 48.0)).corner_radius(8));
                                 } else {
                                     ui.add_space(48.0);
                                 }
+                            } else {
+                                ui.add_space(48.0);
                             }
                             ui.add_space(8.0);
                             ui.label(RichText::new(&p2).size(15.0).color(if w2 { theme::SUCCESS } else { theme::TEXT_PRIMARY }).strong());

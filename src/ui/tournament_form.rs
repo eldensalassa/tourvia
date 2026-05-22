@@ -108,12 +108,13 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
                         .strong(),
                 )
                 .fill(if can_create { theme::ACCENT_BRONZE } else { theme::BG_CARD_HOVER })
-                .corner_radius(theme::button_rounding())
-                .min_size(Vec2::new(f32::INFINITY, 42.0));
+                .corner_radius(theme::button_rounding());
 
-                if ui.add_enabled(can_create, create_btn).clicked() {
-                    app.create_tournament();
-                }
+                ui.add_enabled_ui(can_create, |ui| {
+                    if ui.add_sized(Vec2::new(ui.available_width(), 42.0), create_btn).clicked() {
+                        app.create_tournament();
+                    }
+                });
 
                 // Status message
                 if let Some((ref msg, ref msg_type)) = app.status_message {

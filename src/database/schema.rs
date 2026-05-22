@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS rounds (
     tournament_id   TEXT NOT NULL,
     round_number    INTEGER NOT NULL,
     name            TEXT NOT NULL,
+    bracket_type    TEXT NOT NULL DEFAULT 'Upper',
     FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE
 );
 ";
@@ -50,6 +51,9 @@ CREATE TABLE IF NOT EXISTS matches (
     status          TEXT NOT NULL DEFAULT 'Pending',
     next_match_id   TEXT,
     next_match_slot INTEGER NOT NULL DEFAULT 0,
+    loser_next_match_id TEXT,
+    loser_next_match_slot INTEGER NOT NULL DEFAULT 0,
+    bracket_type    TEXT NOT NULL DEFAULT 'Upper',
     FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
     FOREIGN KEY (round_id) REFERENCES rounds(id) ON DELETE CASCADE
 );
@@ -60,4 +64,8 @@ pub const MIGRATIONS: &[&str] = &[
     "ALTER TABLE tournaments ADD COLUMN description TEXT NOT NULL DEFAULT '';",
     "ALTER TABLE tournaments ADD COLUMN game_name TEXT NOT NULL DEFAULT '';",
     "ALTER TABLE participants ADD COLUMN logo_data BLOB;",
+    "ALTER TABLE rounds ADD COLUMN bracket_type TEXT NOT NULL DEFAULT 'Upper';",
+    "ALTER TABLE matches ADD COLUMN bracket_type TEXT NOT NULL DEFAULT 'Upper';",
+    "ALTER TABLE matches ADD COLUMN loser_next_match_id TEXT;",
+    "ALTER TABLE matches ADD COLUMN loser_next_match_slot INTEGER NOT NULL DEFAULT 0;",
 ];

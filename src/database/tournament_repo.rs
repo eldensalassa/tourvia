@@ -1,12 +1,12 @@
-use rusqlite::{params, Result};
-
+use rusqlite::params;
 use crate::database::Database;
 use crate::domain::tournament::{Tournament, TournamentStatus, TournamentType};
+use crate::domain::repositories::TournamentRepository;
 
-impl Database {
-    /// Insert a new tournament into the database.
-    pub fn create_tournament(&self, t: &Tournament) -> Result<()> {
-        self.conn.execute(
+impl TournamentRepository for Database {
+    fn create_tournament(&self, t: &Tournament) -> Result<(), String> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
             "INSERT INTO tournaments (id, name, tournament_type, participant_count, status, created_at, description, game_name)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
             params![
@@ -19,17 +19,17 @@ impl Database {
                 t.description,
                 t.game_name,
             ],
-        )?;
+        ).map_err(|e| e.to_string())?;
         Ok(())
     }
 
-    /// Get a tournament by its ID.
-    pub fn get_tournament(&self, id: &str) -> Result<Option<Tournament>> {
-        let mut stmt = self.conn.prepare(
+    fn get_tournament(&self, id: &str) -> Result<Option<Tournament>, String> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
             "SELECT id, name, tournament_type, participant_count, status, created_at,
                     COALESCE(description, '') as description, COALESCE(game_name, '') as game_name
              FROM tournaments WHERE id = ?1",
-        )?;
+        ).map_err(|e| e.to_string())?;
 
         let mut rows = stmt.query_map(params![id], |row| {
             Ok(Tournament {
@@ -42,22 +42,22 @@ impl Database {
                 description: row.get(6)?,
                 game_name: row.get(7)?,
             })
-        })?;
+        }).map_err(|e| e.to_string())?;
 
         match rows.next() {
             Some(Ok(t)) => Ok(Some(t)),
-            Some(Err(e)) => Err(e),
+            Some(Err(e)) => Err(e.to_string()),
             None => Ok(None),
         }
     }
 
-    /// Get all tournaments, ordered by creation date (newest first).
-    pub fn get_all_tournaments(&self) -> Result<Vec<Tournament>> {
-        let mut stmt = self.conn.prepare(
+    fn get_all_tournaments(&self) -> Result<Vec<Tournament>, String> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
             "SELECT id, name, tournament_type, participant_count, status, created_at,
                     COALESCE(description, '') as description, COALESCE(game_name, '') as game_name
              FROM tournaments ORDER BY created_at DESC",
-        )?;
+        ).map_err(|e| e.to_string())?;
 
         let rows = stmt.query_map([], |row| {
             Ok(Tournament {
@@ -70,40 +70,39 @@ impl Database {
                 description: row.get(6)?,
                 game_name: row.get(7)?,
             })
-        })?;
+        }).map_err(|e| e.to_string())?;
 
         let mut tournaments = Vec::new();
         for row in rows {
-            tournaments.push(row?);
+            tournaments.push(row.map_err(|e| e.to_string())?);
         }
         Ok(tournaments)
     }
 
-    /// Update tournament status.
-    pub fn update_tournament_status(&self, id: &str, status: &TournamentStatus) -> Result<()> {
-        self.conn.execute(
+    fn update_tournament_status(&self, id: &str, status: &TournamentStatus) -> Result<(), String> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
             "UPDATE tournaments SET status = ?1 WHERE id = ?2",
             params![status.as_str(), id],
-        )?;
+        ).map_err(|e| e.to_string())?;
         Ok(())
     }
 
-    /// Update the participant count for a tournament.
-    pub fn update_tournament_participant_count(&self, id: &str, count: usize) -> Result<()> {
-        self.conn.execute(
+    fn update_tournament_participant_count(&self, id: &str, count: usize) -> Result<(), String> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
             "UPDATE tournaments SET participant_count = ?1 WHERE id = ?2",
             params![count as i64, id],
-        )?;
+        ).map_err(|e| e.to_string())?;
         Ok(())
     }
 
-    /// Delete a tournament and all related data (cascade).
-    pub fn delete_tournament(&self, id: &str) -> Result<()> {
-        // Delete in order due to foreign keys (even though CASCADE is set)
-        self.conn.execute("DELETE FROM matches WHERE tournament_id = ?1", params![id])?;
-        self.conn.execute("DELETE FROM rounds WHERE tournament_id = ?1", params![id])?;
-        self.conn.execute("DELETE FROM participants WHERE tournament_id = ?1", params![id])?;
-        self.conn.execute("DELETE FROM tournaments WHERE id = ?1", params![id])?;
+    fn delete_tournament(&self, id: &str) -> Result<(), String> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute("DELETE FROM matches WHERE tournament_id = ?1", params![id]).map_err(|e| e.to_string())?;
+        conn.execute("DELETE FROM rounds WHERE tournament_id = ?1", params![id]).map_err(|e| e.to_string())?;
+        conn.execute("DELETE FROM participants WHERE tournament_id = ?1", params![id]).map_err(|e| e.to_string())?;
+        conn.execute("DELETE FROM tournaments WHERE id = ?1", params![id]).map_err(|e| e.to_string())?;
         Ok(())
     }
 }

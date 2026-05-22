@@ -1,28 +1,26 @@
-use rusqlite::{params, Result};
-
+use rusqlite::params;
 use crate::database::Database;
-use crate::domain::match_model::{Match, MatchStatus};
+use crate::domain::match_model::{BracketType, Match, MatchStatus};
 use crate::domain::round::Round;
+use crate::domain::repositories::{MatchRepository, RoundRepository};
 
-impl Database {
-    // ─── Round Operations ─────────────────────────────
-
-    /// Insert a new round.
-    pub fn create_round(&self, r: &Round) -> Result<()> {
-        self.conn.execute(
-            "INSERT INTO rounds (id, tournament_id, round_number, name)
-             VALUES (?1, ?2, ?3, ?4)",
-            params![r.id, r.tournament_id, r.round_number, r.name],
-        )?;
+impl RoundRepository for Database {
+    fn create_round(&self, r: &Round) -> Result<(), String> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
+            "INSERT INTO rounds (id, tournament_id, round_number, name, bracket_type)
+             VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![r.id, r.tournament_id, r.round_number, r.name, r.bracket_type.as_str()],
+        ).map_err(|e| e.to_string())?;
         Ok(())
     }
 
-    /// Get all rounds for a tournament, ordered by round number.
-    pub fn get_rounds_by_tournament(&self, tournament_id: &str) -> Result<Vec<Round>> {
-        let mut stmt = self.conn.prepare(
-            "SELECT id, tournament_id, round_number, name
+    fn get_rounds_by_tournament(&self, tournament_id: &str) -> Result<Vec<Round>, String> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, tournament_id, round_number, name, bracket_type
              FROM rounds WHERE tournament_id = ?1 ORDER BY round_number ASC",
-        )?;
+        ).map_err(|e| e.to_string())?;
 
         let rows = stmt.query_map(params![tournament_id], |row| {
             Ok(Round {
@@ -30,33 +28,35 @@ impl Database {
                 tournament_id: row.get(1)?,
                 round_number: row.get(2)?,
                 name: row.get(3)?,
+                bracket_type: BracketType::from_str(&row.get::<_, String>(4)?),
             })
-        })?;
+        }).map_err(|e| e.to_string())?;
 
         let mut rounds = Vec::new();
         for row in rows {
-            rounds.push(row?);
+            rounds.push(row.map_err(|e| e.to_string())?);
         }
         Ok(rounds)
     }
 
-    /// Delete all rounds for a tournament.
-    pub fn delete_all_rounds(&self, tournament_id: &str) -> Result<()> {
-        self.conn.execute(
+    fn delete_all_rounds(&self, tournament_id: &str) -> Result<(), String> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
             "DELETE FROM rounds WHERE tournament_id = ?1",
             params![tournament_id],
-        )?;
+        ).map_err(|e| e.to_string())?;
         Ok(())
     }
+}
 
-    // ─── Match Operations ─────────────────────────────
-
-    /// Insert a new match.
-    pub fn create_match(&self, m: &Match) -> Result<()> {
-        self.conn.execute(
+impl MatchRepository for Database {
+    fn create_match(&self, m: &Match) -> Result<(), String> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
             "INSERT INTO matches (id, tournament_id, round_id, match_order, player1_id, player2_id,
-             player1_name, player2_name, score1, score2, winner_id, status, next_match_id, next_match_slot)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14)",
+             player1_name, player2_name, score1, score2, winner_id, status, next_match_id, next_match_slot,
+             loser_next_match_id, loser_next_match_slot, bracket_type)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17)",
             params![
                 m.id,
                 m.tournament_id,
@@ -72,22 +72,26 @@ impl Database {
                 m.status.as_str(),
                 m.next_match_id,
                 m.next_match_slot,
+                m.loser_next_match_id,
+                m.loser_next_match_slot,
+                m.bracket_type.as_str(),
             ],
-        )?;
+        ).map_err(|e| e.to_string())?;
         Ok(())
     }
 
-    /// Get all matches for a tournament, ordered by round_id and match_order.
-    pub fn get_matches_by_tournament(&self, tournament_id: &str) -> Result<Vec<Match>> {
-        let mut stmt = self.conn.prepare(
+    fn get_matches_by_tournament(&self, tournament_id: &str) -> Result<Vec<Match>, String> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
             "SELECT m.id, m.tournament_id, m.round_id, m.match_order,
                     m.player1_id, m.player2_id, m.player1_name, m.player2_name,
-                    m.score1, m.score2, m.winner_id, m.status, m.next_match_id, m.next_match_slot
+                    m.score1, m.score2, m.winner_id, m.status, m.next_match_id, m.next_match_slot,
+                    m.loser_next_match_id, m.loser_next_match_slot, m.bracket_type
              FROM matches m
              JOIN rounds r ON m.round_id = r.id
              WHERE m.tournament_id = ?1
              ORDER BY r.round_number ASC, m.match_order ASC",
-        )?;
+        ).map_err(|e| e.to_string())?;
 
         let rows = stmt.query_map(params![tournament_id], |row| {
             Ok(Match {
@@ -105,77 +109,81 @@ impl Database {
                 status: MatchStatus::from_str(&row.get::<_, String>(11)?),
                 next_match_id: row.get(12)?,
                 next_match_slot: row.get(13)?,
+                loser_next_match_id: row.get(14)?,
+                loser_next_match_slot: row.get(15)?,
+                bracket_type: BracketType::from_str(&row.get::<_, String>(16)?),
             })
-        })?;
+        }).map_err(|e| e.to_string())?;
 
         let mut matches = Vec::new();
         for row in rows {
-            matches.push(row?);
+            matches.push(row.map_err(|e| e.to_string())?);
         }
         Ok(matches)
     }
 
-    /// Update match scores and status.
-    pub fn update_match_score(
+    fn update_match_score(
         &self,
         match_id: &str,
         score1: i32,
         score2: i32,
-        winner_id: Option<&str>,
         status: &MatchStatus,
-    ) -> Result<()> {
-        self.conn.execute(
+        winner_id: Option<&str>,
+    ) -> Result<(), String> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
             "UPDATE matches SET score1 = ?1, score2 = ?2, winner_id = ?3, status = ?4 WHERE id = ?5",
             params![score1, score2, winner_id, status.as_str(), match_id],
-        )?;
+        ).map_err(|e| e.to_string())?;
         Ok(())
     }
 
-    /// Set player in a match slot (used when advancing winners).
-    pub fn set_match_player(
+    fn set_match_player(
         &self,
         match_id: &str,
         slot: i32,
         player_id: &str,
         player_name: &str,
-    ) -> Result<()> {
+    ) -> Result<(), String> {
+        let conn = self.conn.lock().unwrap();
         if slot == 1 {
-            self.conn.execute(
+            conn.execute(
                 "UPDATE matches SET player1_id = ?1, player1_name = ?2, status = CASE
                     WHEN player2_id IS NOT NULL THEN 'In Progress'
                     ELSE status
                  END WHERE id = ?3",
                 params![player_id, player_name, match_id],
-            )?;
+            ).map_err(|e| e.to_string())?;
         } else {
-            self.conn.execute(
+            conn.execute(
                 "UPDATE matches SET player2_id = ?1, player2_name = ?2, status = CASE
                     WHEN player1_id IS NOT NULL THEN 'In Progress'
                     ELSE status
                  END WHERE id = ?3",
                 params![player_id, player_name, match_id],
-            )?;
+            ).map_err(|e| e.to_string())?;
         }
         Ok(())
     }
 
-    /// Delete all matches for a tournament.
-    pub fn delete_all_matches(&self, tournament_id: &str) -> Result<()> {
-        self.conn.execute(
+    fn delete_all_matches(&self, tournament_id: &str) -> Result<(), String> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute(
             "DELETE FROM matches WHERE tournament_id = ?1",
             params![tournament_id],
-        )?;
+        ).map_err(|e| e.to_string())?;
         Ok(())
     }
 
-    /// Get a single match by ID.
-    pub fn get_match_by_id(&self, match_id: &str) -> Result<Option<Match>> {
-        let mut stmt = self.conn.prepare(
+    fn get_match_by_id(&self, match_id: &str) -> Result<Option<Match>, String> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
             "SELECT id, tournament_id, round_id, match_order,
                     player1_id, player2_id, player1_name, player2_name,
-                    score1, score2, winner_id, status, next_match_id, next_match_slot
+                    score1, score2, winner_id, status, next_match_id, next_match_slot,
+                    loser_next_match_id, loser_next_match_slot, bracket_type
              FROM matches WHERE id = ?1",
-        )?;
+        ).map_err(|e| e.to_string())?;
 
         let mut rows = stmt.query_map(params![match_id], |row| {
             Ok(Match {
@@ -193,12 +201,15 @@ impl Database {
                 status: MatchStatus::from_str(&row.get::<_, String>(11)?),
                 next_match_id: row.get(12)?,
                 next_match_slot: row.get(13)?,
+                loser_next_match_id: row.get(14)?,
+                loser_next_match_slot: row.get(15)?,
+                bracket_type: BracketType::from_str(&row.get::<_, String>(16)?),
             })
-        })?;
+        }).map_err(|e| e.to_string())?;
 
         match rows.next() {
             Some(Ok(m)) => Ok(Some(m)),
-            Some(Err(e)) => Err(e),
+            Some(Err(e)) => Err(e.to_string()),
             None => Ok(None),
         }
     }

@@ -31,6 +31,32 @@ impl MatchStatus {
     }
 }
 
+/// Indicates whether a match/round belongs to the Upper or Lower bracket, or is the Grand Final.
+#[derive(Debug, Clone, PartialEq)]
+pub enum BracketType {
+    Upper,
+    Lower,
+    GrandFinal,
+}
+
+impl BracketType {
+    pub fn as_str(&self) -> &str {
+        match self {
+            BracketType::Upper => "Upper",
+            BracketType::Lower => "Lower",
+            BracketType::GrandFinal => "GrandFinal",
+        }
+    }
+
+    pub fn from_str(s: &str) -> Self {
+        match s {
+            "Lower" => BracketType::Lower,
+            "GrandFinal" => BracketType::GrandFinal,
+            _ => BracketType::Upper,
+        }
+    }
+}
+
 /// A single match within a tournament round.
 ///
 /// Each match tracks two player slots, their scores,
@@ -51,6 +77,9 @@ pub struct Match {
     pub status: MatchStatus,
     pub next_match_id: Option<String>,
     pub next_match_slot: i32, // 1 or 2 — which slot in the next match
+    pub loser_next_match_id: Option<String>, // Used for Double Elimination
+    pub loser_next_match_slot: i32,
+    pub bracket_type: BracketType,
 }
 
 impl Match {
@@ -60,6 +89,7 @@ impl Match {
         match_order: i32,
         next_match_id: Option<String>,
         next_match_slot: i32,
+        bracket_type: BracketType,
     ) -> Self {
         Self {
             id: uuid::Uuid::new_v4().to_string(),
@@ -76,6 +106,9 @@ impl Match {
             status: MatchStatus::Pending,
             next_match_id,
             next_match_slot,
+            loser_next_match_id: None,
+            loser_next_match_slot: 0,
+            bracket_type,
         }
     }
 }

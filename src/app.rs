@@ -5,7 +5,13 @@ use crate::domain::match_model::Match;
 use crate::domain::participant::Participant;
 use crate::domain::round::Round;
 use crate::domain::tournament::{Tournament, TournamentStatus, TournamentType};
-use crate::services::{bracket_generator, match_service, tournament_service};
+use crate::services::{
+    bracket_generator::BracketGeneratorService,
+    match_service::MatchService,
+    tournament_service::TournamentService,
+};
+use crate::domain::repositories::*;
+use std::sync::Arc;
 use crate::ui;
 
 use rand::seq::SliceRandom;
@@ -36,8 +42,15 @@ pub enum MessageType {
 
 // ─── Application State ─────────────────────────────
 
+pub struct AppServices {
+    pub tournament: TournamentService,
+    pub match_service: MatchService,
+    pub bracket_generator: BracketGeneratorService,
+}
+
 pub struct TourviaApp {
-    pub db: Database,
+    pub db: Arc<Database>,
+    pub services: AppServices,
     pub current_view: View,
     pub active_tab: TournamentTab,
     pub theme_applied: bool,
@@ -85,11 +98,20 @@ pub struct TourviaApp {
 }
 
 impl TourviaApp {
-    pub fn new(db: Database) -> Self {
-        let tournaments = tournament_service::load_all_tournaments(&db).unwrap_or_default();
+    pub fn new(db_instance: Database) -> Self {
+        let db = Arc::new(db_instance);
+        
+        let services = AppServices {
+            tournament: TournamentService::new(db.clone(), db.clone(), db.clone(), db.clone()),
+            match_service: MatchService::new(db.clone(), db.clone(), db.clone()),
+            bracket_generator: BracketGeneratorService::new(db.clone(), db.clone()),
+        };
+
+        let tournaments = services.tournament.load_all_tournaments().unwrap_or_default();
 
         Self {
             db,
+            services,
             current_view: View::Dashboard,
             active_tab: TournamentTab::Overview,
             theme_applied: false,
@@ -156,7 +178,7 @@ impl TourviaApp {
     // ─── Data Loading ───────────────────────────────
 
     fn refresh_tournaments(&mut self) {
-        self.tournaments = tournament_service::load_all_tournaments(&self.db).unwrap_or_default();
+        self.tournaments = self.services.tournament.load_all_tournaments().unwrap_or_default();
     }
 
     fn load_tournament_data(&mut self, tournament_id: &str) {
@@ -175,7 +197,7 @@ impl TourviaApp {
             .get_matches_by_tournament(tournament_id)
             .unwrap_or_default();
 
-        self.champion_name = match_service::get_champion(&self.db, tournament_id).unwrap_or(None);
+        self.champion_name = self.services.match_service.get_champion(tournament_id).unwrap_or(None);
 
         if self.logos_loaded_for.as_deref() != Some(tournament_id) {
             self.logo_textures.clear();
@@ -210,8 +232,7 @@ impl TourviaApp {
     // ─── Tournament Actions ─────────────────────────
 
     pub fn create_tournament(&mut self) {
-        match tournament_service::create_tournament(
-            &self.db,
+        match self.services.tournament.create_tournament(
             &self.new_tournament_name,
             self.new_tournament_type.clone(),
             &self.new_tournament_description,
@@ -239,7 +260,7 @@ impl TourviaApp {
     pub fn delete_tournament_at(&mut self, idx: usize) {
         if idx < self.tournaments.len() {
             let id = self.tournaments[idx].id.clone();
-            if let Err(e) = tournament_service::delete_tournament(&self.db, &id) {
+            if let Err(e) = self.services.tournament.delete_tournament(&id) {
                 self.status_message = Some((e, MessageType::Error));
             } else {
                 self.confirm_delete = None;
@@ -253,7 +274,7 @@ impl TourviaApp {
             Some(t) => t.id.clone(),
             None => return,
         };
-        match tournament_service::reset_bracket(&self.db, &tid) {
+        match self.services.tournament.reset_bracket(&tid) {
             Ok(_) => {
                 self.load_tournament_data(&tid);
                 self.refresh_tournaments();
@@ -273,7 +294,7 @@ impl TourviaApp {
             Some(t) => t.id.clone(),
             None => return,
         };
-        match tournament_service::export_tournament_json(&self.db, &tid) {
+        match self.services.tournament.export_tournament_json(&tid) {
             Ok(json) => {
                 if let Some(path) = rfd::FileDialog::new()
                     .add_filter("JSON", &["json"])
@@ -479,9 +500,9 @@ impl TourviaApp {
             (tournament.id.clone(), tournament.tournament_type.clone())
         } else { return; };
 
-        match bracket_generator::generate_bracket(&self.db, &tid, &self.participants, &ttype) {
+        match self.services.bracket_generator.generate_bracket(&tid, &self.participants, &ttype) {
             Ok(_) => {
-                let _ = tournament_service::update_status(&self.db, &tid, TournamentStatus::InProgress);
+                let _ = self.services.tournament.update_status(&tid, TournamentStatus::InProgress);
                 self.load_tournament_data(&tid);
                 self.refresh_tournaments();
                 if let Ok(Some(t)) = self.db.get_tournament(&tid) {
@@ -524,14 +545,14 @@ impl TourviaApp {
             }
         };
 
-        match match_service::submit_score(&self.db, &match_id, s1, s2) {
+        match self.services.match_service.submit_score(&match_id, s1, s2) {
             Ok(_) => {
                 if let Some(ref tournament) = self.active_tournament {
                     let tid = tournament.id.clone();
                     self.load_tournament_data(&tid);
 
-                    if let Ok(true) = match_service::is_tournament_complete(&self.db, &tid) {
-                        let _ = tournament_service::update_status(&self.db, &tid, TournamentStatus::Completed);
+                    if let Ok(true) = self.services.match_service.is_tournament_complete(&tid) {
+                        let _ = self.services.tournament.update_status(&tid, TournamentStatus::Completed);
                         if let Ok(Some(t)) = self.db.get_tournament(&tid) { self.active_tournament = Some(t); }
                         self.refresh_tournaments();
                     }

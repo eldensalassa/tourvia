@@ -1,1 +1,20 @@
 /target
+
+# Database files
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+tourvia.db
+tourvia.db-*
+
+# IDEs and OS files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+Thumbs.db

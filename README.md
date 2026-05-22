@@ -85,17 +85,4 @@ cargo run
 - `src/database/`: Layanan koneksi SQLite menggunakan `rusqlite`.
 
 ---
-
-## ❓ Troubleshooting (Pemecahan Masalah)
-
-1. **Muncul pesan "ERROR wgpu_hal::vulkan::instance" di terminal**:
-   Abaikan error ini. Ini terjadi akibat dari injeksi pihak ketiga sistem komputer Anda (seperti Rockstar Games / ReShade) ke *pipeline* Vulkan, hal ini sama sekali tidak memengaruhi aplikasi `tourvia` yang otomatis menggunakan sistem *fallback*.
-   
-2. **Tidak Bisa Generate Bracket**: 
-   Pastikan Anda telah memasukkan minimal 2 partisipan dan turnamen Anda aktif.
-
-3. **Peserta Double Elimination di Grand Final menumpuk**:
-   Masalah ini pernah terjadi, namun telah dipecahkan di pembaruan versi `2.0.0` (garis simetris Upper dan Lower final akan bertemu tepat di tengah koordinat Grand Final). Pastikan Anda menggunakan versi kode terbaru.
-
----
 *Dibuat oleh Tim Tourvia - Final Project Desktop - 2026*

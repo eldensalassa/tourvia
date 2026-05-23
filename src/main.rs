@@ -31,7 +31,10 @@ fn main() -> eframe::Result<()> {
         Box::new(|cc| {
             // Install image loaders for egui to load textures
             egui_extras::install_image_loaders(&cc.egui_ctx);
-            Ok(Box::new(TourviaApp::new(db)))
+            let mut app = TourviaApp::new(db);
+            app.refresh_tournaments();
+            app.load_rosters();
+            Ok(Box::new(app))
         }),
     )
 }

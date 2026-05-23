@@ -86,49 +86,48 @@ impl TournamentService {
         let matches = self.match_repo.get_matches_by_tournament(tournament_id)
             .map_err(|e| format!("DB error: {}", e))?;
 
-        let json = serde_json::json!({
-            "tournament": {
-                "id": tournament.id,
-                "name": tournament.name,
-                "type": tournament.tournament_type.as_str(),
-                "status": tournament.status.as_str(),
-                "participant_count": tournament.participant_count,
-                "created_at": tournament.created_at,
-                "description": tournament.description,
-                "game_name": tournament.game_name,
-            },
-            "participants": participants.iter().map(|p| {
-                serde_json::json!({
-                    "id": p.id,
-                    "name": p.name,
-                    "seed": p.seed,
-                })
-            }).collect::<Vec<_>>(),
-            "rounds": rounds.iter().map(|r| {
-                serde_json::json!({
-                    "id": r.id,
-                    "round_number": r.round_number,
-                    "name": r.name,
-                    "bracket_type": r.bracket_type.as_str(),
-                })
-            }).collect::<Vec<_>>(),
-            "matches": matches.iter().map(|m| {
-                serde_json::json!({
-                    "id": m.id,
-                    "round_id": m.round_id,
-                    "match_order": m.match_order,
-                    "player1_name": m.player1_name,
-                    "player2_name": m.player2_name,
-                    "score1": m.score1,
-                    "score2": m.score2,
-                    "status": m.status.as_str(),
-                    "winner_id": m.winner_id,
-                    "bracket_type": m.bracket_type.as_str(),
-                })
-            }).collect::<Vec<_>>(),
-        });
+        let export_data = crate::domain::export_model::TournamentExport {
+            tournament,
+            participants,
+            rounds,
+            matches,
+        };
 
-        serde_json::to_string_pretty(&json)
+        serde_json::to_string_pretty(&export_data)
             .map_err(|e| format!("JSON error: {}", e))
+    }
+
+    pub fn import_tournament_json(&self, json_str: &str) -> Result<String, String> {
+        let export_data: crate::domain::export_model::TournamentExport = serde_json::from_str(json_str)
+            .map_err(|e| format!("Failed to parse JSON: {}", e))?;
+        
+        let t = &export_data.tournament;
+        
+        // Ensure it doesn't already exist or fail gracefully
+        if self.tournament_repo.get_tournament(&t.id).map_err(|e| e.to_string())?.is_some() {
+            // We could regenerate IDs here, but to keep it simple and perfectly matching:
+            // we assume if it exists, we error out or delete the old one. Let's return error.
+            return Err("Tournament with this ID already exists. Cannot import.".to_string());
+        }
+
+        self.tournament_repo.create_tournament(t)
+            .map_err(|e| format!("Failed to insert tournament: {}", e))?;
+
+        for p in &export_data.participants {
+            self.participant_repo.create_participant(p)
+                .map_err(|e| format!("Failed to insert participant: {}", e))?;
+        }
+
+        for r in &export_data.rounds {
+            self.round_repo.create_round(r)
+                .map_err(|e| format!("Failed to insert round: {}", e))?;
+        }
+
+        for m in &export_data.matches {
+            self.match_repo.create_match(m)
+                .map_err(|e| format!("Failed to insert match: {}", e))?;
+        }
+
+        Ok(t.id.clone())
     }
 }

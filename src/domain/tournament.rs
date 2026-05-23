@@ -1,5 +1,7 @@
+use serde::{Serialize, Deserialize};
+
 /// Represents the type of tournament bracket structure.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum TournamentType {
     SingleElimination,
     DoubleElimination,
@@ -25,7 +27,7 @@ impl TournamentType {
 }
 
 /// Current status of a tournament.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum TournamentStatus {
     /// Tournament created but bracket not yet generated.
     Draft,
@@ -54,7 +56,7 @@ impl TournamentStatus {
 }
 
 /// Core tournament entity.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Tournament {
     pub id: String,
     pub name: String,

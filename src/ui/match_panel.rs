@@ -7,14 +7,25 @@ use crate::ui::theme;
 pub fn render_modal(app: &mut TourviaApp, ctx: &egui::Context) {
     let mut is_open = app.show_match_modal;
 
-    egui::Window::new("🎯 Match Details")
-        .open(&mut is_open)
+    egui::Window::new("MatchDetailsModal")
+        .title_bar(false)
         .collapsible(false)
         .resizable(false)
         .anchor(egui::Align2::CENTER_CENTER, Vec2::ZERO)
-        .frame(egui::Frame::new().fill(theme::BG_PANEL).stroke(theme::card_stroke()).corner_radius(8).inner_margin(24))
+        .frame(egui::Frame::new().fill(theme::BG_PANEL()).stroke(theme::card_stroke()).corner_radius(8).inner_margin(24))
         .show(ctx, |ui| {
             ui.set_min_width(320.0);
+
+            // Custom Title Bar
+            ui.horizontal(|ui| {
+                ui.label(RichText::new("🎯 Match Details").font(egui::FontId::proportional(20.0)).color(theme::TEXT_PRIMARY()).strong());
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    if ui.add(egui::Button::new(RichText::new("✖").size(16.0).color(theme::TEXT_MUTED())).fill(egui::Color32::TRANSPARENT)).clicked() {
+                        is_open = false;
+                    }
+                });
+            });
+            ui.add_space(16.0);
 
             let selected_match = if let Some(ref match_id) = app.selected_match {
                 app.matches.iter().find(|m| m.id == *match_id).cloned()
@@ -29,7 +40,7 @@ pub fn render_modal(app: &mut TourviaApp, ctx: &egui::Context) {
                         .find(|r| r.id == m.round_id)
                         .map(|r| r.name.as_str()).unwrap_or("Unknown");
 
-                    ui.label(RichText::new(format!("{} — Match #{}", round_name, m.match_order + 1)).size(14.0).color(theme::TEXT_SECONDARY).strong());
+                    ui.label(RichText::new(format!("{} — Match #{}", round_name, m.match_order + 1)).size(14.0).color(theme::TEXT_SECONDARY()).strong());
                     ui.add_space(16.0);
 
                     let p1 = if m.player1_name.is_empty() { "TBD".to_string() } else { m.player1_name.clone() };
@@ -59,15 +70,15 @@ pub fn render_modal(app: &mut TourviaApp, ctx: &egui::Context) {
                                 ui.add_space(48.0);
                             }
                             ui.add_space(8.0);
-                            ui.label(RichText::new(&p1).size(15.0).color(if w1 { theme::SUCCESS } else { theme::TEXT_PRIMARY }).strong());
+                            ui.label(RichText::new(&p1).size(15.0).color(if w1 { theme::SUCCESS() } else { theme::TEXT_PRIMARY() }).strong());
                             if m.status == MatchStatus::Completed {
-                                ui.label(RichText::new(m.score1.to_string()).size(24.0).color(if w1 { theme::SUCCESS } else { theme::TEXT_SECONDARY }).strong());
+                                ui.label(RichText::new(m.score1.to_string()).size(24.0).color(if w1 { theme::SUCCESS() } else { theme::TEXT_SECONDARY() }).strong());
                             }
                         });
 
                         ui.allocate_ui_with_layout(Vec2::new(vs_width, 100.0), egui::Layout::top_down(egui::Align::Center), |ui| {
                             ui.add_space(20.0);
-                            ui.label(RichText::new("VS").size(14.0).color(theme::TEXT_MUTED));
+                            ui.label(RichText::new("VS").size(14.0).color(theme::TEXT_MUTED()));
                         });
 
                         ui.allocate_ui_with_layout(Vec2::new(p_width, 100.0), egui::Layout::top_down(egui::Align::Center), |ui| {
@@ -81,9 +92,9 @@ pub fn render_modal(app: &mut TourviaApp, ctx: &egui::Context) {
                                 ui.add_space(48.0);
                             }
                             ui.add_space(8.0);
-                            ui.label(RichText::new(&p2).size(15.0).color(if w2 { theme::SUCCESS } else { theme::TEXT_PRIMARY }).strong());
+                            ui.label(RichText::new(&p2).size(15.0).color(if w2 { theme::SUCCESS() } else { theme::TEXT_PRIMARY() }).strong());
                             if m.status == MatchStatus::Completed {
-                                ui.label(RichText::new(m.score2.to_string()).size(24.0).color(if w2 { theme::SUCCESS } else { theme::TEXT_SECONDARY }).strong());
+                                ui.label(RichText::new(m.score2.to_string()).size(24.0).color(if w2 { theme::SUCCESS() } else { theme::TEXT_SECONDARY() }).strong());
                             }
                         });
                     });
@@ -97,34 +108,26 @@ pub fn render_modal(app: &mut TourviaApp, ctx: &egui::Context) {
                         
                         ui.horizontal(|ui| {
                             ui.vertical(|ui| {
-                                ui.label(RichText::new(&p1).color(theme::TEXT_SECONDARY));
+                                ui.label(RichText::new(&p1).color(theme::TEXT_SECONDARY()));
                                 ui.add(egui::TextEdit::singleline(&mut app.score_input[0]).desired_width(130.0).hint_text("Score"));
                             });
                             ui.add_space(20.0);
                             ui.vertical(|ui| {
-                                ui.label(RichText::new(&p2).color(theme::TEXT_SECONDARY));
+                                ui.label(RichText::new(&p2).color(theme::TEXT_SECONDARY()));
                                 ui.add(egui::TextEdit::singleline(&mut app.score_input[1]).desired_width(130.0).hint_text("Score"));
                             });
                         });
                         
                         ui.add_space(16.0);
                         
-                        if ui.add(egui::Button::new(RichText::new("Submit Match Result").size(14.0).color(theme::BG_DARK).strong())
-                            .fill(theme::ACCENT_BRONZE).corner_radius(theme::button_rounding())
+                        if ui.add(egui::Button::new(RichText::new("Submit Match Result").size(14.0).color(theme::BG_DARK()).strong())
+                            .fill(theme::ACCENT_BRONZE()).corner_radius(theme::button_rounding())
                             .min_size(Vec2::new(ui.available_width(), 36.0))).clicked() {
                             app.submit_match_score();
                         }
                     }
 
-                    if let Some((ref msg, ref mt)) = app.status_message {
-                        ui.add_space(12.0);
-                        let c = match mt {
-                            crate::app::MessageType::Success => theme::SUCCESS,
-                            crate::app::MessageType::Error => theme::ERROR,
-                            crate::app::MessageType::Info => theme::INFO,
-                        };
-                        ui.label(RichText::new(msg).color(c).size(13.0));
-                    }
+
                 }
             }
         });

@@ -1,5 +1,7 @@
+use serde::{Serialize, Deserialize};
+
 /// Status of an individual match within a bracket.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum MatchStatus {
     /// Waiting for both players to be determined.
     Pending,
@@ -32,7 +34,7 @@ impl MatchStatus {
 }
 
 /// Indicates whether a match/round belongs to the Upper or Lower bracket, or is the Grand Final.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum BracketType {
     Upper,
     Lower,
@@ -61,7 +63,7 @@ impl BracketType {
 ///
 /// Each match tracks two player slots, their scores,
 /// the winner, and a link to the next match in the bracket.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Match {
     pub id: String,
     pub tournament_id: String,

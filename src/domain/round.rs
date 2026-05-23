@@ -1,5 +1,7 @@
+use serde::{Serialize, Deserialize};
+
 /// A round within a tournament bracket (e.g., Quarter Final, Semi Final, Final).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Round {
     pub id: String,
     pub tournament_id: String,

@@ -39,3 +39,22 @@ pub trait MatchRepository: Send + Sync {
     fn set_match_player(&self, id: &str, slot: i32, player_id: &str, player_name: &str) -> Result<(), String>;
     fn delete_all_matches(&self, tournament_id: &str) -> Result<(), String>;
 }
+
+pub trait RosterRepository: Send + Sync {
+    fn create_roster(&self, roster: &crate::domain::roster::Roster) -> Result<(), String>;
+    fn get_rosters(&self) -> Result<Vec<crate::domain::roster::Roster>, String>;
+    fn update_roster(&self, roster: &crate::domain::roster::Roster) -> Result<(), String>;
+    fn delete_roster(&self, id: &str) -> Result<(), String>;
+    
+    // Roster Members
+    fn add_roster_member(&self, member: &crate::domain::roster::RosterMember) -> Result<(), String>;
+    fn get_roster_members(&self, roster_id: &str) -> Result<Vec<crate::domain::roster::RosterMember>, String>;
+    fn update_roster_member(&self, member: &crate::domain::roster::RosterMember) -> Result<(), String>;
+    fn delete_roster_member(&self, member_id: &str) -> Result<(), String>;
+}
+
+pub trait GameRepository: Send + Sync {
+    fn create_game(&self, game: &crate::domain::game::Game) -> Result<(), String>;
+    fn get_games(&self) -> Result<Vec<crate::domain::game::Game>, String>;
+    fn delete_game(&self, id: &str) -> Result<(), String>;
+}

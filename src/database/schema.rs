@@ -59,6 +59,32 @@ CREATE TABLE IF NOT EXISTS matches (
 );
 ";
 
+pub const CREATE_GAMES_TABLE: &str = "
+CREATE TABLE IF NOT EXISTS games (
+    id TEXT PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL
+);
+";
+
+pub const CREATE_ROSTERS_TABLE: &str = "
+CREATE TABLE IF NOT EXISTS rosters (
+    id              TEXT PRIMARY KEY,
+    name            TEXT NOT NULL,
+    game            TEXT NOT NULL DEFAULT '',
+    logo_data       BLOB
+);
+";
+
+pub const CREATE_ROSTER_MEMBERS_TABLE: &str = "
+CREATE TABLE IF NOT EXISTS roster_members (
+    id              TEXT PRIMARY KEY,
+    roster_id       TEXT NOT NULL,
+    name            TEXT NOT NULL,
+    profile_picture BLOB,
+    FOREIGN KEY (roster_id) REFERENCES rosters(id) ON DELETE CASCADE
+);
+";
+
 /// Migration statements for existing databases (add new columns if missing).
 pub const MIGRATIONS: &[&str] = &[
     "ALTER TABLE tournaments ADD COLUMN description TEXT NOT NULL DEFAULT '';",

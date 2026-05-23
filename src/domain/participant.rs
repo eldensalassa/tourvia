@@ -1,5 +1,7 @@
+use serde::{Serialize, Deserialize};
+
 /// A participant (player/team) in a tournament.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Participant {
     pub id: String,
     pub tournament_id: String,

@@ -31,6 +31,9 @@ impl Database {
         conn.execute_batch(schema::CREATE_PARTICIPANTS_TABLE)?;
         conn.execute_batch(schema::CREATE_ROUNDS_TABLE)?;
         conn.execute_batch(schema::CREATE_MATCHES_TABLE)?;
+        conn.execute_batch(schema::CREATE_ROSTERS_TABLE)?;
+        conn.execute_batch(schema::CREATE_ROSTER_MEMBERS_TABLE)?;
+        conn.execute_batch(schema::CREATE_GAMES_TABLE)?;
         Ok(())
     }
 

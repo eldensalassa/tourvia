@@ -9,8 +9,8 @@ pub struct TournamentStats {
     pub pending_matches: usize,
     pub in_progress_matches: usize,
     pub bye_matches: usize,
-    /// (participant_name, points, wins, losses, draws)
-    pub standings: Vec<(String, i32, i32, i32, i32)>,
+    /// (participant_id, participant_name, points, wins, losses, draws)
+    pub standings: Vec<(String, String, i32, i32, i32, i32)>,
 }
 
 pub struct MatchService {
@@ -154,7 +154,7 @@ impl MatchService {
         let bye_matches = matches.iter().filter(|m| m.status == MatchStatus::Bye).count();
 
         // Calculate win/loss per participant
-        let mut standings: Vec<(String, i32, i32, i32, i32)> = participants
+        let mut standings: Vec<(String, String, i32, i32, i32, i32)> = participants
             .iter()
             .map(|p| {
                 let mut wins = 0;
@@ -182,12 +182,12 @@ impl MatchService {
                     }
                 }
 
-                (p.name.clone(), points, wins, losses, draws)
+                (p.id.clone(), p.name.clone(), points, wins, losses, draws)
             })
             .collect();
 
         // Sort by points descending, then wins, then fewest losses
-        standings.sort_by(|a, b| b.1.cmp(&a.1).then(b.2.cmp(&a.2)).then(a.3.cmp(&b.3)));
+        standings.sort_by(|a, b| b.2.cmp(&a.2).then(b.3.cmp(&a.3)).then(a.4.cmp(&b.4)));
 
         Ok(TournamentStats {
             total_matches,

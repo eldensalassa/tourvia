@@ -15,11 +15,24 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
     ui.horizontal(|ui| {
         ui.label(theme::subheading_text("Bracket"));
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            if ui.add(egui::Button::new(RichText::new("+").size(14.0).color(theme::TEXT_SECONDARY)).fill(theme::BG_CARD).min_size(Vec2::new(28.0, 24.0))).clicked() {
+            if ui.add(egui::Button::new(RichText::new("🖼 Export PNG").size(12.0).color(theme::TEXT_PRIMARY())).fill(theme::BG_CARD())).clicked() {
+                if let Some(t) = &app.active_tournament {
+                    if let Some(path) = rfd::FileDialog::new().add_filter("png", &["png"]).save_file() {
+                        if let Err(e) = crate::utils::image_exporter::export_bracket(t, &app.rounds, &app.matches, path.to_str().unwrap()) {
+                            app.notifications.error(format!("Export failed: {}", e));
+                        } else {
+                            app.notifications.success("Bracket exported to PNG!");
+                        }
+                    }
+                }
+            }
+            ui.add_space(8.0);
+
+            if ui.add(egui::Button::new(RichText::new("+").size(14.0).color(theme::TEXT_SECONDARY())).fill(theme::BG_CARD()).min_size(Vec2::new(28.0, 24.0))).clicked() {
                 app.bracket_zoom = (app.bracket_zoom + 0.1).min(2.0);
             }
-            ui.label(RichText::new(&format!("{}%", (app.bracket_zoom * 100.0) as i32)).size(11.0).color(theme::TEXT_MUTED));
-            if ui.add(egui::Button::new(RichText::new("−").size(14.0).color(theme::TEXT_SECONDARY)).fill(theme::BG_CARD).min_size(Vec2::new(28.0, 24.0))).clicked() {
+            ui.label(RichText::new(&format!("{}%", (app.bracket_zoom * 100.0) as i32)).size(11.0).color(theme::TEXT_MUTED()));
+            if ui.add(egui::Button::new(RichText::new("−").size(14.0).color(theme::TEXT_SECONDARY())).fill(theme::BG_CARD()).min_size(Vec2::new(28.0, 24.0))).clicked() {
                 app.bracket_zoom = (app.bracket_zoom - 0.1).max(0.4);
             }
             ui.label(RichText::new("🔍").size(12.0));
@@ -39,7 +52,7 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
     if let Some(ref champion) = app.champion_name {
         egui::Frame::new()
             .fill(egui::Color32::from_rgba_premultiplied(205, 127, 50, 20))
-            .stroke(Stroke::new(1.0, theme::ACCENT_BRONZE))
+            .stroke(Stroke::new(1.0, theme::ACCENT_BRONZE()))
             .corner_radius(6)
             .inner_margin(egui::Margin::symmetric(16, 10))
             .show(ui, |ui| {
@@ -70,7 +83,7 @@ fn render_round_robin_view(app: &mut TourviaApp, ui: &mut Ui) {
             for round in &app.rounds.clone() {
                 ui.add_space(8.0);
                 egui::Frame::new()
-                    .fill(theme::BG_PANEL)
+                    .fill(theme::BG_PANEL())
                     .stroke(theme::card_stroke())
                     .corner_radius(theme::card_rounding())
                     .inner_margin(egui::Margin::same(16))
@@ -82,8 +95,8 @@ fn render_round_robin_view(app: &mut TourviaApp, ui: &mut Ui) {
 
                         for m in &round_matches {
                             let is_selected = app.selected_match.as_ref() == Some(&m.id);
-                            let bg = if is_selected { theme::BG_ELEVATED } else { theme::BG_CARD };
-                            let border = if is_selected { theme::ACCENT_BRONZE } else { theme::BORDER_SUBTLE };
+                            let bg = if is_selected { theme::BG_ELEVATED() } else { theme::BG_CARD() };
+                            let border = if is_selected { theme::ACCENT_BRONZE() } else { theme::BORDER_SUBTLE() };
 
                             let resp = egui::Frame::new()
                                 .fill(bg)
@@ -93,7 +106,7 @@ fn render_round_robin_view(app: &mut TourviaApp, ui: &mut Ui) {
                                 .show(ui, |ui| {
                                     ui.horizontal(|ui| {
                                         let p1 = if m.player1_name.is_empty() { "TBD" } else { &m.player1_name };
-                                        let p1_color = if m.winner_id.is_some() && m.player1_id == m.winner_id { theme::SUCCESS } else { theme::TEXT_PRIMARY };
+                                        let p1_color = if m.winner_id.is_some() && m.player1_id == m.winner_id { theme::SUCCESS() } else { theme::TEXT_PRIMARY() };
                                         ui.allocate_ui_with_layout(Vec2::new(150.0, 20.0), egui::Layout::right_to_left(egui::Align::Center), |ui| {
                                             ui.label(RichText::new(p1).size(14.0).color(p1_color).strong());
                                             if m.status == MatchStatus::Completed {
@@ -103,11 +116,11 @@ fn render_round_robin_view(app: &mut TourviaApp, ui: &mut Ui) {
                                         });
 
                                         ui.allocate_ui_with_layout(Vec2::new(40.0, 20.0), egui::Layout::centered_and_justified(egui::Direction::LeftToRight), |ui| {
-                                            ui.label(RichText::new("vs").size(12.0).color(theme::TEXT_MUTED));
+                                            ui.label(RichText::new("vs").size(12.0).color(theme::TEXT_MUTED()));
                                         });
 
                                         let p2 = if m.player2_name.is_empty() { "TBD" } else { &m.player2_name };
-                                        let p2_color = if m.winner_id.is_some() && m.player2_id == m.winner_id { theme::SUCCESS } else { theme::TEXT_PRIMARY };
+                                        let p2_color = if m.winner_id.is_some() && m.player2_id == m.winner_id { theme::SUCCESS() } else { theme::TEXT_PRIMARY() };
                                         ui.allocate_ui_with_layout(Vec2::new(150.0, 20.0), egui::Layout::left_to_right(egui::Align::Center), |ui| {
                                             if m.status == MatchStatus::Completed {
                                                 ui.label(RichText::new(m.score2.to_string()).size(14.0).color(p2_color).strong());
@@ -117,10 +130,10 @@ fn render_round_robin_view(app: &mut TourviaApp, ui: &mut Ui) {
                                         });
 
                                         let (sc, st) = match m.status {
-                                            MatchStatus::Completed => (theme::SUCCESS, "✅"),
-                                            MatchStatus::InProgress => (theme::ACCENT_BRONZE, "▶"),
-                                            MatchStatus::Bye => (theme::WARNING, "BYE"),
-                                            MatchStatus::Pending => (theme::TEXT_MUTED, "⏳"),
+                                            MatchStatus::Completed => (theme::SUCCESS(), "✅"),
+                                            MatchStatus::InProgress => (theme::ACCENT_BRONZE(), "▶"),
+                                            MatchStatus::Bye => (theme::WARNING(), "BYE"),
+                                            MatchStatus::Pending => (theme::TEXT_MUTED(), "⏳"),
                                         };
                                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                                             ui.label(RichText::new(st).size(13.0).color(sc));
@@ -195,7 +208,7 @@ fn render_elimination_bracket(app: &mut TourviaApp, ui: &mut Ui) {
                     Align2::LEFT_CENTER,
                     label,
                     FontId::new(18.0 * zoom, FontFamily::Proportional),
-                    theme::TEXT_PRIMARY,
+                    theme::TEXT_PRIMARY(),
                 );
 
                 let tree_origin = Pos2::new(start_origin.x, start_origin.y + 40.0 * zoom);
@@ -211,7 +224,7 @@ fn render_elimination_bracket(app: &mut TourviaApp, ui: &mut Ui) {
                         Align2::CENTER_CENTER,
                         &round.name,
                         FontId::new(14.0 * zoom, FontFamily::Proportional),
-                        theme::TEXT_SECONDARY,
+                        theme::TEXT_SECONDARY(),
                     );
 
                     let round_matches: Vec<_> = app.matches.iter().filter(|m| m.round_id == round.id).collect();
@@ -223,47 +236,75 @@ fn render_elimination_bracket(app: &mut TourviaApp, ui: &mut Ui) {
                         let card_rect = Rect::from_min_size(Pos2::new(round_x, match_y), Vec2::new(card_w, card_h));
 
                         let is_selected = Some(&m.id) == app.selected_match.as_ref();
+                        let radius = 8.0 * zoom;
                         
-                        painter.rect_filled(card_rect, (4.0 * zoom) as u8, if is_selected { theme::BG_ELEVATED } else { theme::BG_CARD });
-                        painter.rect_stroke(card_rect, (4.0 * zoom) as u8, Stroke::new(if is_selected { 2.0 } else { 1.0 }, if is_selected { theme::ACCENT_BRONZE } else { theme::BORDER }), StrokeKind::Inside);
+                        // Draw shadow manually by drawing slightly offset darker rects
+                        painter.rect_filled(card_rect.translate(Vec2::new(0.0, 2.0 * zoom)), radius, egui::Color32::from_black_alpha(40));
+
+                        painter.rect_filled(card_rect, radius, if is_selected { theme::BG_ELEVATED() } else { theme::BG_CARD() });
+                        painter.rect_stroke(card_rect, radius, Stroke::new(if is_selected { 2.0 } else { 1.0 }, if is_selected { theme::ACCENT_BRONZE() } else { theme::BORDER_SUBTLE() }), StrokeKind::Inside);
 
                         let div_y = card_rect.min.y + half_h;
-                        painter.line_segment([Pos2::new(card_rect.min.x, div_y), Pos2::new(card_rect.max.x, div_y)], Stroke::new(1.0, theme::BORDER));
+                        painter.line_segment([Pos2::new(card_rect.min.x, div_y), Pos2::new(card_rect.max.x, div_y)], Stroke::new(1.0, theme::BORDER_SUBTLE()));
 
                         let score_box_w = 30.0 * zoom;
 
-                        // P1
                         let p1_name = if m.player1_name.is_empty() { "TBD" } else { &m.player1_name };
                         let p1_win = m.winner_id.is_some() && m.player1_id == m.winner_id;
-                        let p1_color = if p1_win { theme::TEXT_PRIMARY } else if m.player1_name == "BYE" { theme::TEXT_MUTED } else { theme::TEXT_SECONDARY };
+                        let p1_color = if p1_win { theme::ACCENT_BRONZE() } else if m.player1_name == "BYE" { theme::TEXT_MUTED() } else { theme::TEXT_SECONDARY() };
                         
-                        painter.text(Pos2::new(card_rect.min.x + 8.0 * zoom, card_rect.min.y + half_h / 2.0), Align2::LEFT_CENTER, p1_name, FontId::new(12.0 * zoom, FontFamily::Proportional), p1_color);
+                        let logo_size = 14.0 * zoom;
+                        let mut p1_text_x = card_rect.min.x + 8.0 * zoom;
+                        if let Some(id) = &m.player1_id {
+                            if let Some(texture) = app.logo_textures.get(id) {
+                                let logo_rect = Rect::from_min_size(
+                                    Pos2::new(p1_text_x, card_rect.min.y + half_h / 2.0 - logo_size / 2.0),
+                                    Vec2::new(logo_size, logo_size)
+                                );
+                                painter.image(texture.id(), logo_rect, Rect::from_min_max(Pos2::new(0.0, 0.0), Pos2::new(1.0, 1.0)), egui::Color32::WHITE);
+                                p1_text_x += logo_size + 6.0 * zoom;
+                            }
+                        }
+
+                        painter.text(Pos2::new(p1_text_x, card_rect.min.y + half_h / 2.0), Align2::LEFT_CENTER, p1_name, FontId::new(12.0 * zoom, FontFamily::Proportional), p1_color);
                         
                         if m.status == MatchStatus::Completed || m.status == MatchStatus::InProgress {
                             let score1_rect = Rect::from_min_size(Pos2::new(card_rect.max.x - score_box_w, card_rect.min.y), Vec2::new(score_box_w, half_h));
-                            painter.rect_filled(score1_rect, CornerRadius { nw: 0, ne: (4.0*zoom) as u8, sw: 0, se: 0 }, theme::BG_PANEL);
-                            painter.line_segment([Pos2::new(score1_rect.min.x, score1_rect.min.y), Pos2::new(score1_rect.min.x, score1_rect.max.y)], Stroke::new(1.0, theme::BORDER));
-                            painter.text(score1_rect.center(), Align2::CENTER_CENTER, &m.score1.to_string(), FontId::new(12.0 * zoom, FontFamily::Proportional), if p1_win { theme::SUCCESS } else { theme::TEXT_MUTED });
-                            if p1_win { painter.line_segment([Pos2::new(score1_rect.max.x - 2.0*zoom, score1_rect.min.y + 2.0*zoom), Pos2::new(score1_rect.max.x - 2.0*zoom, score1_rect.max.y - 2.0*zoom)], Stroke::new(3.0 * zoom, theme::SUCCESS)); }
+                            painter.rect_filled(score1_rect, CornerRadius { nw: 0, ne: (4.0*zoom) as u8, sw: 0, se: 0 }, theme::BG_PANEL());
+                            painter.line_segment([Pos2::new(score1_rect.min.x, score1_rect.min.y), Pos2::new(score1_rect.min.x, score1_rect.max.y)], Stroke::new(1.0, theme::BORDER()));
+                            painter.text(score1_rect.center(), Align2::CENTER_CENTER, &m.score1.to_string(), FontId::new(12.0 * zoom, FontFamily::Proportional), if p1_win { theme::SUCCESS() } else { theme::TEXT_MUTED() });
+                            if p1_win { painter.line_segment([Pos2::new(score1_rect.max.x - 2.0*zoom, score1_rect.min.y + 2.0*zoom), Pos2::new(score1_rect.max.x - 2.0*zoom, score1_rect.max.y - 2.0*zoom)], Stroke::new(3.0 * zoom, theme::SUCCESS())); }
                         }
 
                         // P2
                         let p2_name = if m.player2_name.is_empty() { "TBD" } else { &m.player2_name };
                         let p2_win = m.winner_id.is_some() && m.player2_id == m.winner_id;
-                        let p2_color = if p2_win { theme::TEXT_PRIMARY } else if m.player2_name == "BYE" { theme::TEXT_MUTED } else { theme::TEXT_SECONDARY };
+                        let p2_color = if p2_win { theme::ACCENT_BRONZE() } else if m.player2_name == "BYE" { theme::TEXT_MUTED() } else { theme::TEXT_SECONDARY() };
                         
-                        painter.text(Pos2::new(card_rect.min.x + 8.0 * zoom, div_y + half_h / 2.0), Align2::LEFT_CENTER, p2_name, FontId::new(12.0 * zoom, FontFamily::Proportional), p2_color);
+                        let mut p2_text_x = card_rect.min.x + 8.0 * zoom;
+                        if let Some(id) = &m.player2_id {
+                            if let Some(texture) = app.logo_textures.get(id) {
+                                let logo_rect = Rect::from_min_size(
+                                    Pos2::new(p2_text_x, div_y + half_h / 2.0 - logo_size / 2.0),
+                                    Vec2::new(logo_size, logo_size)
+                                );
+                                painter.image(texture.id(), logo_rect, Rect::from_min_max(Pos2::new(0.0, 0.0), Pos2::new(1.0, 1.0)), egui::Color32::WHITE);
+                                p2_text_x += logo_size + 6.0 * zoom;
+                            }
+                        }
+
+                        painter.text(Pos2::new(p2_text_x, div_y + half_h / 2.0), Align2::LEFT_CENTER, p2_name, FontId::new(12.0 * zoom, FontFamily::Proportional), p2_color);
                         
                         if m.status == MatchStatus::Completed || m.status == MatchStatus::InProgress {
                             let score2_rect = Rect::from_min_size(Pos2::new(card_rect.max.x - score_box_w, div_y), Vec2::new(score_box_w, half_h));
-                            painter.rect_filled(score2_rect, CornerRadius { nw: 0, ne: 0, sw: 0, se: (4.0*zoom) as u8 }, theme::BG_PANEL);
-                            painter.line_segment([Pos2::new(score2_rect.min.x, score2_rect.min.y), Pos2::new(score2_rect.min.x, score2_rect.max.y)], Stroke::new(1.0, theme::BORDER));
-                            painter.text(score2_rect.center(), Align2::CENTER_CENTER, &m.score2.to_string(), FontId::new(12.0 * zoom, FontFamily::Proportional), if p2_win { theme::SUCCESS } else { theme::TEXT_MUTED });
-                            if p2_win { painter.line_segment([Pos2::new(score2_rect.max.x - 2.0*zoom, score2_rect.min.y + 2.0*zoom), Pos2::new(score2_rect.max.x - 2.0*zoom, score2_rect.max.y - 2.0*zoom)], Stroke::new(3.0 * zoom, theme::SUCCESS)); }
+                            painter.rect_filled(score2_rect, CornerRadius { nw: 0, ne: 0, sw: 0, se: (4.0*zoom) as u8 }, theme::BG_PANEL());
+                            painter.line_segment([Pos2::new(score2_rect.min.x, score2_rect.min.y), Pos2::new(score2_rect.min.x, score2_rect.max.y)], Stroke::new(1.0, theme::BORDER()));
+                            painter.text(score2_rect.center(), Align2::CENTER_CENTER, &m.score2.to_string(), FontId::new(12.0 * zoom, FontFamily::Proportional), if p2_win { theme::SUCCESS() } else { theme::TEXT_MUTED() });
+                            if p2_win { painter.line_segment([Pos2::new(score2_rect.max.x - 2.0*zoom, score2_rect.min.y + 2.0*zoom), Pos2::new(score2_rect.max.x - 2.0*zoom, score2_rect.max.y - 2.0*zoom)], Stroke::new(3.0 * zoom, theme::SUCCESS())); }
                         }
 
                         if m.status == MatchStatus::Bye {
-                            painter.text(Pos2::new(card_rect.max.x - 4.0*zoom, card_rect.min.y + half_h), Align2::RIGHT_CENTER, "BYE", FontId::new(10.0 * zoom, FontFamily::Proportional), theme::TEXT_MUTED);
+                            painter.text(Pos2::new(card_rect.max.x - 4.0*zoom, card_rect.min.y + half_h), Align2::RIGHT_CENTER, "BYE", FontId::new(10.0 * zoom, FontFamily::Proportional), theme::TEXT_MUTED());
                         }
 
                         if response.clicked() {
@@ -287,7 +328,7 @@ fn render_elimination_bracket(app: &mut TourviaApp, ui: &mut Ui) {
                                     let start = Pos2::new(card_rect.max.x, card_rect.center().y);
                                     let end = Pos2::new(next_x, next_y + half_h);
                                     let mid_x = start.x + h_gap / 2.0;
-                                    let stroke = Stroke::new(2.0 * zoom, theme::CONNECTOR_LINE);
+                                    let stroke = Stroke::new(2.0 * zoom, theme::CONNECTOR_LINE());
 
                                     painter.line_segment([start, Pos2::new(mid_x, start.y)], stroke);
                                     painter.line_segment([Pos2::new(mid_x, start.y), Pos2::new(mid_x, end.y)], stroke);
@@ -328,7 +369,7 @@ fn render_elimination_bracket(app: &mut TourviaApp, ui: &mut Ui) {
                     
                     let mid_x = gf_card_x - h_gap / 2.0;
                     let gf_center_y = gf_card_y + half_h;
-                    let stroke = Stroke::new(2.0 * zoom, theme::CONNECTOR_LINE);
+                    let stroke = Stroke::new(2.0 * zoom, theme::CONNECTOR_LINE());
 
                     // Upper Final connection
                     if !upper_rounds.is_empty() {

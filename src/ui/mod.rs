@@ -5,3 +5,5 @@ pub mod participant_panel;
 pub mod bracket_view;
 pub mod match_panel;
 pub mod stats_panel;
+pub mod notifications;
+pub mod global_roster;

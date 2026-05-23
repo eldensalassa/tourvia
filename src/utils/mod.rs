@@ -1,3 +1,5 @@
+pub mod image_exporter;
+
 /// Generate round name based on round number and total rounds.
 ///
 /// # Examples

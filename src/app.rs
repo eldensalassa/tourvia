@@ -23,6 +23,7 @@ pub enum View {
     Dashboard,
     TournamentForm,
     TournamentDetail,
+    GlobalRoster,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -33,12 +34,6 @@ pub enum TournamentTab {
     Standings,
 }
 
-#[derive(Debug, Clone)]
-pub enum MessageType {
-    Success,
-    Error,
-    Info,
-}
 
 // ─── Application State ─────────────────────────────
 
@@ -76,7 +71,7 @@ pub struct TourviaApp {
     pub score_input: [String; 2],
 
     // Status message
-    pub status_message: Option<(String, MessageType)>,
+    pub notifications: crate::ui::notifications::NotificationQueue,
 
     // Dashboard
     pub search_query: String,
@@ -95,6 +90,21 @@ pub struct TourviaApp {
 
     // Zoom
     pub bracket_zoom: f32,
+
+    // Global Roster
+    pub global_rosters: Vec<crate::domain::roster::Roster>,
+    pub new_roster_name: String,
+    pub new_roster_game: String, // Kept for the dropdown selection state
+    pub new_roster_logo: Option<Vec<u8>>,
+    pub active_roster: Option<crate::domain::roster::Roster>,
+    pub roster_members: Vec<crate::domain::roster::RosterMember>,
+    pub new_member_name: String,
+    pub new_member_photo: Option<Vec<u8>>,
+    pub member_photo_textures: std::collections::HashMap<String, egui::TextureHandle>,
+    
+    // Games
+    pub global_games: Vec<crate::domain::game::Game>,
+    pub new_game_name: String,
 }
 
 impl TourviaApp {
@@ -109,7 +119,7 @@ impl TourviaApp {
 
         let tournaments = services.tournament.load_all_tournaments().unwrap_or_default();
 
-        Self {
+        let mut app = Self {
             db,
             services,
             current_view: View::Dashboard,
@@ -129,7 +139,7 @@ impl TourviaApp {
             new_participant_name: String::new(),
             show_match_modal: false,
             score_input: [String::new(), String::new()],
-            status_message: None,
+            notifications: crate::ui::notifications::NotificationQueue::new(),
             search_query: String::new(),
             confirm_delete: None,
             show_stats: false,
@@ -138,6 +148,76 @@ impl TourviaApp {
             logo_textures: HashMap::new(),
             logos_loaded_for: None,
             bracket_zoom: 1.0,
+            global_rosters: Vec::new(),
+            new_roster_name: String::new(),
+            new_roster_game: String::new(),
+            new_roster_logo: None,
+            active_roster: None,
+            roster_members: Vec::new(),
+            new_member_name: String::new(),
+            new_member_photo: None,
+            member_photo_textures: std::collections::HashMap::new(),
+            global_games: Vec::new(),
+            new_game_name: String::new(),
+        };
+        app.load_games();
+        app.load_rosters();
+        app
+    }
+
+    pub fn load_rosters(&mut self) {
+        use crate::domain::repositories::RosterRepository;
+        match self.db.get_rosters() {
+            Ok(r) => self.global_rosters = r,
+            Err(e) => self.notifications.error(format!("Failed to load rosters: {}", e)),
+        }
+    }
+
+    pub fn open_roster(&mut self, idx: usize) {
+        if idx < self.global_rosters.len() {
+            self.active_roster = Some(self.global_rosters[idx].clone());
+            self.new_member_name.clear();
+            self.new_member_photo = None;
+            self.member_photo_textures.clear();
+            self.load_active_roster_members();
+        }
+    }
+
+    pub fn close_roster(&mut self) {
+        self.active_roster = None;
+        self.roster_members.clear();
+        self.member_photo_textures.clear();
+        self.new_member_name.clear();
+        self.new_member_photo = None;
+    }
+
+    pub fn load_active_roster_members(&mut self) {
+        if let Some(r) = &self.active_roster {
+            use crate::domain::repositories::RosterRepository;
+            match self.db.get_roster_members(&r.id) {
+                Ok(members) => self.roster_members = members,
+                Err(e) => self.notifications.error(e),
+            }
+        }
+    }
+
+    pub fn ensure_member_photos_loaded(&mut self, ctx: &egui::Context) {
+        for m in &self.roster_members {
+            if m.profile_picture.is_some() && !self.member_photo_textures.contains_key(&m.id) {
+                if let Some(data) = &m.profile_picture {
+                    if let Some(texture) = Self::decode_logo(ctx, &m.id, data) {
+                        self.member_photo_textures.insert(m.id.clone(), texture);
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn load_games(&mut self) {
+        use crate::domain::repositories::GameRepository;
+        match self.db.get_games() {
+            Ok(g) => self.global_games = g,
+            Err(e) => self.notifications.error(format!("Failed to load games: {}", e)),
         }
     }
 
@@ -146,7 +226,7 @@ impl TourviaApp {
     pub fn go_to_dashboard(&mut self) {
         self.current_view = View::Dashboard;
         self.active_tournament = None;
-        self.status_message = None;
+        
         self.confirm_delete = None;
         self.refresh_tournaments();
     }
@@ -157,7 +237,7 @@ impl TourviaApp {
         self.new_tournament_type = TournamentType::SingleElimination;
         self.new_tournament_description.clear();
         self.new_tournament_game.clear();
-        self.status_message = None;
+        
     }
 
     pub fn open_tournament(&mut self, idx: usize) {
@@ -166,7 +246,7 @@ impl TourviaApp {
             self.active_tournament = Some(tournament.clone());
             self.current_view = View::TournamentDetail;
             self.active_tab = TournamentTab::Overview;
-            self.status_message = None;
+            
             self.selected_match = None;
             self.show_match_modal = false;
             self.score_input = [String::new(), String::new()];
@@ -177,7 +257,7 @@ impl TourviaApp {
 
     // ─── Data Loading ───────────────────────────────
 
-    fn refresh_tournaments(&mut self) {
+    pub fn refresh_tournaments(&mut self) {
         self.tournaments = self.services.tournament.load_all_tournaments().unwrap_or_default();
     }
 
@@ -217,7 +297,7 @@ impl TourviaApp {
         }
     }
 
-    fn decode_logo(ctx: &egui::Context, name: &str, data: &[u8]) -> Option<egui::TextureHandle> {
+    pub fn decode_logo(ctx: &egui::Context, name: &str, data: &[u8]) -> Option<egui::TextureHandle> {
         let img = image::load_from_memory(data).ok()?;
         let rgba = img.to_rgba8();
         let size = [rgba.width() as usize, rgba.height() as usize];
@@ -239,10 +319,7 @@ impl TourviaApp {
             &self.new_tournament_game,
         ) {
             Ok(tournament) => {
-                self.status_message = Some((
-                    format!("Tournament '{}' created!", tournament.name),
-                    MessageType::Success,
-                ));
+                self.notifications.success(format!("Tournament '{}' created!", tournament.name));
                 self.active_tournament = Some(tournament.clone());
                 self.current_view = View::TournamentDetail;
                 self.active_tab = TournamentTab::Overview;
@@ -252,7 +329,7 @@ impl TourviaApp {
                 self.refresh_tournaments();
             }
             Err(e) => {
-                self.status_message = Some((e, MessageType::Error));
+                self.notifications.error(e);
             }
         }
     }
@@ -261,7 +338,7 @@ impl TourviaApp {
         if idx < self.tournaments.len() {
             let id = self.tournaments[idx].id.clone();
             if let Err(e) = self.services.tournament.delete_tournament(&id) {
-                self.status_message = Some((e, MessageType::Error));
+                self.notifications.error(e);
             } else {
                 self.confirm_delete = None;
                 self.refresh_tournaments();
@@ -281,10 +358,10 @@ impl TourviaApp {
                 if let Ok(Some(t)) = self.db.get_tournament(&tid) {
                     self.active_tournament = Some(t);
                 }
-                self.status_message = Some(("Bracket reset to Draft.".to_string(), MessageType::Info));
+                self.notifications.info("Bracket reset to Draft.");
             }
             Err(e) => {
-                self.status_message = Some((e, MessageType::Error));
+                self.notifications.error(e);
             }
         }
     }
@@ -303,22 +380,43 @@ impl TourviaApp {
                 {
                     match std::fs::write(&path, &json) {
                         Ok(_) => {
-                            self.status_message = Some((
-                                format!("Exported to {}", path.display()),
-                                MessageType::Success,
-                            ));
+                            self.notifications.success(format!("Exported to {}", path.display()));
                         }
                         Err(e) => {
-                            self.status_message = Some((
-                                format!("Failed to write file: {}", e),
-                                MessageType::Error,
-                            ));
+                            self.notifications.error(format!("Failed to write file: {}", e));
                         }
                     }
                 }
             }
             Err(e) => {
-                self.status_message = Some((e, MessageType::Error));
+                self.notifications.error(e);
+            }
+        }
+    }
+
+    pub fn import_json(&mut self) {
+        if let Some(path) = rfd::FileDialog::new()
+            .add_filter("JSON", &["json"])
+            .pick_file()
+        {
+            match std::fs::read_to_string(&path) {
+                Ok(json_str) => {
+                    match self.services.tournament.import_tournament_json(&json_str) {
+                        Ok(tid) => {
+                            self.notifications.success("Tournament imported successfully!");
+                            self.refresh_tournaments();
+                            if let Some(idx) = self.tournaments.iter().position(|t| t.id == tid) {
+                                self.open_tournament(idx);
+                            }
+                        }
+                        Err(e) => {
+                            self.notifications.error(e);
+                        }
+                    }
+                }
+                Err(e) => {
+                    self.notifications.error(format!("Failed to read file: {}", e));
+                }
             }
         }
     }
@@ -328,7 +426,7 @@ impl TourviaApp {
     pub fn add_participant(&mut self) {
         let name = self.new_participant_name.trim().to_string();
         if name.is_empty() {
-            self.status_message = Some(("Name cannot be empty.".to_string(), MessageType::Error));
+            self.notifications.error("Name cannot be empty.");
             return;
         }
 
@@ -338,30 +436,38 @@ impl TourviaApp {
 
         match self.db.participant_exists(&tid, &name) {
             Ok(true) => {
-                self.status_message = Some((format!("'{}' already exists.", name), MessageType::Error));
+                self.notifications.error(format!("'{}' already exists.", name));
                 return;
             }
             Err(e) => {
-                self.status_message = Some((format!("Database error: {}", e), MessageType::Error));
+                self.notifications.error(format!("Database error: {}", e));
                 return;
             }
             _ => {}
         }
 
         let seed = self.participants.len() as i32 + 1;
-        let participant = Participant::new(tid.clone(), name.clone(), seed);
+        let participant = crate::domain::participant::Participant::new(tid.clone(), name.clone(), seed);
 
         match self.db.create_participant(&participant) {
             Ok(_) => {
+                // If the team is in the global roster and has a logo, copy it.
+                if let Some(roster_team) = self.global_rosters.iter().find(|r| r.name == participant.name) {
+                    if let Some(ref logo_data) = roster_team.logo_data {
+                        use crate::domain::repositories::ParticipantRepository;
+                        let _ = self.db.set_participant_logo(&participant.id, logo_data);
+                    }
+                }
+
                 self.new_participant_name.clear();
                 self.load_tournament_data(&tid);
                 let count = self.participants.len();
                 let _ = self.db.update_tournament_participant_count(&tid, count);
-                self.status_message = Some((format!("'{}' added", participant.name), MessageType::Success));
+                self.notifications.success(format!("'{}' added", participant.name));
                 self.refresh_tournaments();
             }
             Err(e) => {
-                self.status_message = Some((format!("Failed to add: {}", e), MessageType::Error));
+                self.notifications.error(format!("Failed to add: {}", e));
             }
         }
     }
@@ -372,7 +478,7 @@ impl TourviaApp {
         let names: Vec<String> = self.bulk_add_text.lines().map(|l| l.trim().to_string()).filter(|l| !l.is_empty()).collect();
 
         if names.is_empty() {
-            self.status_message = Some(("No names provided.".to_string(), MessageType::Error));
+            self.notifications.error("No names provided.");
             return;
         }
 
@@ -393,7 +499,7 @@ impl TourviaApp {
         self.refresh_tournaments();
         self.bulk_add_text.clear();
         self.show_bulk_add = false;
-        self.status_message = Some((format!("{} participant(s) added.", added), MessageType::Success));
+        self.notifications.success(format!("{} participant(s) added.", added));
     }
 
     pub fn delete_participant(&mut self, idx: usize) {
@@ -404,12 +510,12 @@ impl TourviaApp {
             self.logo_textures.remove(&p_id);
 
             if let Err(e) = self.db.delete_participant(&p_id) {
-                self.status_message = Some((format!("Failed to delete: {}", e), MessageType::Error));
+                self.notifications.error(format!("Failed to delete: {}", e));
             } else {
                 self.load_tournament_data(&tid);
                 let count = self.participants.len();
                 let _ = self.db.update_tournament_participant_count(&tid, count);
-                self.status_message = Some(("Participant removed.".to_string(), MessageType::Info));
+                self.notifications.info("Participant removed.");
                 self.refresh_tournaments();
             }
         }
@@ -417,60 +523,33 @@ impl TourviaApp {
 
     pub fn move_participant_up(&mut self, idx: usize) {
         if idx == 0 || idx >= self.participants.len() { return; }
-        let tid = match &self.active_tournament { Some(t) => t.id.clone(), None => return };
-
-        let id_a = self.participants[idx].id.clone();
-        let name_a = self.participants[idx].name.clone();
-        let seed_a = self.participants[idx].seed;
-
-        let id_b = self.participants[idx - 1].id.clone();
-        let name_b = self.participants[idx - 1].name.clone();
-        let seed_b = self.participants[idx - 1].seed;
-
-        let _ = self.db.update_participant(&id_a, &name_a, seed_b);
-        let _ = self.db.update_participant(&id_b, &name_b, seed_a);
-        self.load_tournament_data(&tid);
+        self.move_participant_to(idx, idx - 1);
     }
 
     pub fn move_participant_down(&mut self, idx: usize) {
         if idx + 1 >= self.participants.len() { return; }
-        self.move_participant_up(idx + 1);
+        self.move_participant_to(idx, idx + 1);
     }
 
-    pub fn import_logo_for_participant(&mut self, idx: usize, ctx: &egui::Context) {
-        if idx >= self.participants.len() { return; }
+    pub fn move_participant_to(&mut self, from_idx: usize, to_idx: usize) {
+        if from_idx == to_idx || from_idx >= self.participants.len() || to_idx >= self.participants.len() { return; }
+        let tid = match &self.active_tournament { Some(t) => t.id.clone(), None => return };
 
-        if let Some(path) = rfd::FileDialog::new()
-            .add_filter("PNG Images", &["png"])
-            .set_title("Select Team Logo (PNG)")
-            .pick_file()
-        {
-            let pid = self.participants[idx].id.clone();
-            match std::fs::read(&path) {
-                Ok(raw_bytes) => {
-                    match Self::process_logo(&raw_bytes) {
-                        Ok(processed) => {
-                            if self.db.set_participant_logo(&pid, &processed).is_ok() {
-                                if let Some(tex) = Self::decode_logo(ctx, &pid, &processed) {
-                                    self.logo_textures.insert(pid.clone(), tex);
-                                }
-                                self.participants[idx].has_logo = true;
-                                self.status_message = Some(("Logo imported!".to_string(), MessageType::Success));
-                            }
-                        }
-                        Err(e) => {
-                            self.status_message = Some((e, MessageType::Error));
-                        }
-                    }
-                }
-                Err(e) => {
-                    self.status_message = Some((format!("Failed to read file: {}", e), MessageType::Error));
-                }
+        let mut new_order = self.participants.clone();
+        let item = new_order.remove(from_idx);
+        new_order.insert(to_idx, item);
+
+        for (i, p) in new_order.iter_mut().enumerate() {
+            let new_seed = (i + 1) as i32;
+            if p.seed != new_seed {
+                p.seed = new_seed;
+                let _ = self.db.update_participant(&p.id, &p.name, p.seed);
             }
         }
+        self.load_tournament_data(&tid);
     }
 
-    fn process_logo(raw_bytes: &[u8]) -> Result<Vec<u8>, String> {
+    pub fn process_logo(raw_bytes: &[u8]) -> Result<Vec<u8>, String> {
         let img = image::load_from_memory(raw_bytes).map_err(|e| format!("Invalid image: {}", e))?;
         let resized = img.resize(128, 128, image::imageops::FilterType::Lanczos3);
         let mut buf = std::io::Cursor::new(Vec::new());
@@ -490,7 +569,7 @@ impl TourviaApp {
         }
 
         self.load_tournament_data(&tid);
-        self.status_message = Some(("Seeds randomized!".to_string(), MessageType::Success));
+        self.notifications.success("Seeds randomized!");
     }
 
     // ─── Bracket Actions ────────────────────────────
@@ -509,10 +588,10 @@ impl TourviaApp {
                     self.active_tournament = Some(t);
                 }
                 self.active_tab = TournamentTab::Bracket; // Auto-switch to bracket tab
-                self.status_message = Some(("Bracket generated successfully!".to_string(), MessageType::Success));
+                self.notifications.success("Bracket generated successfully!");
             }
             Err(e) => {
-                self.status_message = Some((e, MessageType::Error));
+                self.notifications.error(e);
             }
         }
     }
@@ -522,7 +601,7 @@ impl TourviaApp {
     pub fn select_match(&mut self, match_id: &str) {
         self.selected_match = Some(match_id.to_string());
         self.score_input = [String::new(), String::new()];
-        self.status_message = None;
+        
         self.show_match_modal = true; // Open modal
     }
 
@@ -532,7 +611,7 @@ impl TourviaApp {
         let s1: i32 = match self.score_input[0].trim().parse() {
             Ok(v) => v,
             Err(_) => {
-                self.status_message = Some(("Invalid score for Player 1.".to_string(), MessageType::Error));
+                self.notifications.error("Invalid score for Player 1.");
                 return;
             }
         };
@@ -540,7 +619,7 @@ impl TourviaApp {
         let s2: i32 = match self.score_input[1].trim().parse() {
             Ok(v) => v,
             Err(_) => {
-                self.status_message = Some(("Invalid score for Player 2.".to_string(), MessageType::Error));
+                self.notifications.error("Invalid score for Player 2.");
                 return;
             }
         };
@@ -557,12 +636,12 @@ impl TourviaApp {
                         self.refresh_tournaments();
                     }
                 }
-                self.status_message = Some(("Score submitted!".to_string(), MessageType::Success));
+                self.notifications.success("Score submitted!");
                 self.score_input = [String::new(), String::new()];
                 self.show_match_modal = false; // Close modal on success
             }
             Err(e) => {
-                self.status_message = Some((e, MessageType::Error));
+                self.notifications.error(e);
             }
         }
     }
@@ -592,13 +671,18 @@ impl eframe::App for TourviaApp {
 
         match self.current_view {
             View::Dashboard => {
-                egui::CentralPanel::default().show(ctx, |panel_ui| {
-                    ui::dashboard::render(self, panel_ui);
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    crate::ui::dashboard::render(self, ui);
                 });
             }
             View::TournamentForm => {
-                egui::CentralPanel::default().show(ctx, |panel_ui| {
-                    ui::tournament_form::render(self, panel_ui);
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    crate::ui::tournament_form::render(self, ui);
+                });
+            }
+            View::GlobalRoster => {
+                egui::CentralPanel::default().show(ctx, |ui| {
+                    crate::ui::global_roster::render(self, ui);
                 });
             }
             View::TournamentDetail => {
@@ -607,12 +691,12 @@ impl eframe::App for TourviaApp {
 
                 // Top bar with Title & Tabs
                 egui::TopBottomPanel::top("top_nav")
-                    .frame(egui::Frame::new().fill(ui::theme::BG_PANEL).inner_margin(egui::Margin::symmetric(24, 16)))
+                    .frame(egui::Frame::new().fill(ui::theme::BG_PANEL()).inner_margin(egui::Margin::symmetric(24, 16)))
                     .show(ctx, |ui| {
                         
                         // Top line: Back button, Title, Actions
                         ui.horizontal(|ui| {
-                            if ui.add(egui::Button::new(egui::RichText::new("← Dashboard").color(ui::theme::TEXT_MUTED).size(13.0)).fill(egui::Color32::TRANSPARENT)).clicked() {
+                            if ui.add(egui::Button::new(egui::RichText::new("← Dashboard").color(ui::theme::TEXT_MUTED()).size(13.0)).fill(egui::Color32::TRANSPARENT)).clicked() {
                                 self.go_to_dashboard();
                                 return;
                             }
@@ -624,9 +708,9 @@ impl eframe::App for TourviaApp {
                                 ui.add_space(8.0);
                                 
                                 let (status_color, status_text) = match t.status {
-                                    TournamentStatus::Draft => (ui::theme::TEXT_MUTED, "Draft"),
-                                    TournamentStatus::InProgress => (ui::theme::ACCENT_BRONZE, "In Progress"),
-                                    TournamentStatus::Completed => (ui::theme::SUCCESS, "Completed"),
+                                    TournamentStatus::Draft => (ui::theme::TEXT_MUTED(), "Draft"),
+                                    TournamentStatus::InProgress => (ui::theme::ACCENT_BRONZE(), "In Progress"),
+                                    TournamentStatus::Completed => (ui::theme::SUCCESS(), "Completed"),
                                 };
                                 ui.add(
                                     egui::Button::new(egui::RichText::new(status_text).size(11.0).color(status_color))
@@ -637,11 +721,11 @@ impl eframe::App for TourviaApp {
                             }
 
                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                if ui.add(egui::Button::new(egui::RichText::new("📤 Export JSON").size(12.0).color(ui::theme::TEXT_SECONDARY)).fill(ui::theme::BG_CARD)).clicked() {
+                                if ui.add(egui::Button::new(egui::RichText::new("📤 Export JSON").size(12.0).color(ui::theme::TEXT_SECONDARY())).fill(ui::theme::BG_CARD())).clicked() {
                                     self.export_json();
                                 }
                                 if !self.is_draft() {
-                                    if ui.add(egui::Button::new(egui::RichText::new("🔄 Reset").size(12.0).color(ui::theme::WARNING)).fill(ui::theme::BG_CARD)).clicked() {
+                                    if ui.add(egui::Button::new(egui::RichText::new("🔄 Reset").size(12.0).color(ui::theme::WARNING())).fill(ui::theme::BG_CARD())).clicked() {
                                         self.reset_bracket();
                                     }
                                 }
@@ -650,46 +734,51 @@ impl eframe::App for TourviaApp {
 
                         ui.add_space(16.0);
 
-                        // Horizontal Tabs
-                        ui.horizontal(|ui| {
-                            let tabs = [
-                                (TournamentTab::Overview, "Overview"),
-                                (TournamentTab::Participants, "Participants"),
-                                (TournamentTab::Bracket, "Bracket"),
-                                (TournamentTab::Standings, "Standings"),
-                            ];
+                        // Horizontal Tabs (Segmented Control Style)
+                        egui::Frame::new()
+                            .fill(ui::theme::BG_CARD())
+                            .corner_radius(ui::theme::button_rounding())
+                            .inner_margin(egui::Margin::same(4))
+                            .show(ui, |ui| {
+                                ui.horizontal(|ui| {
+                                    let tabs = [
+                                        (TournamentTab::Overview, "Overview"),
+                                        (TournamentTab::Participants, "Participants"),
+                                        (TournamentTab::Bracket, "Bracket"),
+                                        (TournamentTab::Standings, "Standings"),
+                                    ];
 
-                            for (tab, label) in tabs {
-                                let is_active = self.active_tab == tab;
-                                let color = if is_active { ui::theme::ACCENT_BRONZE } else { ui::theme::TEXT_SECONDARY };
-                                let text = egui::RichText::new(label).size(14.0).color(color).strong();
-                                
-                                // Tab styling
-                                let btn = egui::Button::new(text)
-                                    .fill(egui::Color32::TRANSPARENT)
-                                    .stroke(egui::Stroke::NONE)
-                                    .min_size(egui::Vec2::new(100.0, 30.0));
-                                
-                                let response = ui.add(btn);
-                                if response.clicked() {
-                                    self.active_tab = tab;
-                                }
+                                    for (tab, label) in tabs {
+                                        let is_active = self.active_tab == tab;
+                                        
+                                        let (bg_color, text_color) = if is_active {
+                                            (ui::theme::BG_ELEVATED(), ui::theme::ACCENT_BRONZE())
+                                        } else {
+                                            (egui::Color32::TRANSPARENT, ui::theme::TEXT_MUTED())
+                                        };
 
-                                // Bottom active indicator
-                                if is_active {
-                                    let rect = response.rect;
-                                    ui.painter().line_segment(
-                                        [egui::pos2(rect.min.x, rect.max.y + 4.0), egui::pos2(rect.max.x, rect.max.y + 4.0)],
-                                        egui::Stroke::new(3.0, ui::theme::ACCENT_BRONZE)
-                                    );
-                                }
-                            }
-                        });
+                                        let text = egui::RichText::new(label)
+                                            .size(14.0)
+                                            .color(text_color)
+                                            .strong();
+                                        
+                                        let btn = egui::Button::new(text)
+                                            .fill(bg_color)
+                                            .stroke(egui::Stroke::NONE)
+                                            .corner_radius(ui::theme::button_rounding())
+                                            .min_size(egui::Vec2::new(120.0, 36.0));
+                                        
+                                        if ui.add(btn).clicked() {
+                                            self.active_tab = tab;
+                                        }
+                                    }
+                                });
+                            });
                     });
 
                 // Content area (based on selected tab)
                 egui::CentralPanel::default()
-                    .frame(egui::Frame::new().fill(ui::theme::BG_DARK).inner_margin(egui::Margin::same(24)))
+                    .frame(egui::Frame::new().fill(ui::theme::BG_DARK()).inner_margin(egui::Margin::same(24)))
                     .show(ctx, |ui| {
                         match self.active_tab {
                             TournamentTab::Overview => {
@@ -723,5 +812,6 @@ impl eframe::App for TourviaApp {
                 }
             }
         }
+        self.notifications.render(ctx);
     }
 }

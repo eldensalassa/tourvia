@@ -126,10 +126,12 @@ impl BracketGeneratorService {
             } else if has_p1 && !has_p2 {
                 first_round[match_idx].status = MatchStatus::Bye;
                 first_round[match_idx].winner_id = first_round[match_idx].player1_id.clone();
+                first_round[match_idx].player2_id = Some("BYE_ID".to_string());
                 first_round[match_idx].player2_name = "BYE".to_string();
             } else if !has_p1 && has_p2 {
                 first_round[match_idx].status = MatchStatus::Bye;
                 first_round[match_idx].winner_id = first_round[match_idx].player2_id.clone();
+                first_round[match_idx].player1_id = Some("BYE_ID".to_string());
                 first_round[match_idx].player1_name = "BYE".to_string();
             }
         }
@@ -255,27 +257,7 @@ impl BracketGeneratorService {
         }
         rounds.extend(lower_rounds);
 
-        for round_matches in &all_matches[0..1] {
-            for m in round_matches {
-                if m.status == MatchStatus::Bye {
-                    if let (Some(ref winner_id), Some(ref next_id)) = (&m.winner_id, &m.next_match_id) {
-                        let winner_name = if m.player1_id.as_ref() == Some(winner_id) {
-                            &m.player1_name
-                        } else {
-                            &m.player2_name
-                        };
-                        self.match_repo.set_match_player(next_id, m.next_match_slot, winner_id, winner_name)
-                            .map_err(|e| format!("Failed to advance bye winner: {}", e))?;
-                    }
-                    
-                    // Drop BYE to lower bracket
-                    if let Some(ref loser_next_id) = m.loser_next_match_id {
-                        self.match_repo.set_match_player(loser_next_id, m.loser_next_match_slot, "BYE_ID", "BYE")
-                            .map_err(|e| format!("Failed to drop bye loser: {}", e))?;
-                    }
-                }
-            }
-        }
+        crate::services::match_service::sweep_byes(&self.match_repo, tournament_id);
 
         Ok((rounds, flat_matches))
     }

@@ -106,7 +106,7 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
                         row.col(|ui| {
                             ui.horizontal(|ui| {
                                 if let Some(texture) = app.logo_textures.get(id) {
-                                    ui.add(egui::Image::new(texture).fit_to_exact_size(Vec2::new(18.0, 18.0)).rounding(2.0));
+                                    ui.add(egui::Image::new(texture).fit_to_exact_size(Vec2::new(18.0, 18.0)).corner_radius(2.0));
                                     ui.add_space(4.0);
                                 }
                                 ui.label(egui::RichText::new(name).size(14.0).color(theme::TEXT_PRIMARY()));

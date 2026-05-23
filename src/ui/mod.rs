@@ -7,3 +7,4 @@ pub mod match_panel;
 pub mod stats_panel;
 pub mod notifications;
 pub mod global_roster;
+pub mod image_picker;

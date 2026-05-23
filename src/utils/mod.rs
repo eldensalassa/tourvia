@@ -1,4 +1,5 @@
 pub mod image_exporter;
+pub mod scraper;
 
 /// Generate round name based on round number and total rounds.
 ///

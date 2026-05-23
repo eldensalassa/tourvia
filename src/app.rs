@@ -34,6 +34,14 @@ pub enum TournamentTab {
     Standings,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum ImageTarget {
+    NewRosterLogo,
+    ExistingRosterLogo(String),
+    NewMemberPhoto,
+    ExistingMemberPhoto(String),
+}
+
 
 // ─── Application State ─────────────────────────────
 
@@ -105,6 +113,17 @@ pub struct TourviaApp {
     // Games
     pub global_games: Vec<crate::domain::game::Game>,
     pub new_game_name: String,
+    
+    // Image Scraper Picker
+    pub image_picker_open: bool,
+    pub image_picker_query: String,
+    pub image_picker_target: Option<ImageTarget>,
+    pub image_picker_results: Option<Vec<crate::utils::scraper::ScrapedImage>>,
+    pub image_picker_loading: bool,
+    pub image_fetch_rx: Option<std::sync::mpsc::Receiver<Result<Vec<crate::utils::scraper::ScrapedImage>, String>>>,
+    pub image_download_rx: Option<std::sync::mpsc::Receiver<Result<Vec<u8>, String>>>,
+    pub image_picker_thumbnails: std::collections::HashMap<String, egui::TextureHandle>,
+    pub thumbnail_fetch_rx: Option<std::sync::mpsc::Receiver<(String, egui::ColorImage)>>,
 }
 
 impl TourviaApp {
@@ -159,6 +178,15 @@ impl TourviaApp {
             member_photo_textures: std::collections::HashMap::new(),
             global_games: Vec::new(),
             new_game_name: String::new(),
+            image_picker_open: false,
+            image_picker_query: String::new(),
+            image_picker_target: None,
+            image_picker_results: None,
+            image_picker_loading: false,
+            image_fetch_rx: None,
+            image_download_rx: None,
+            image_picker_thumbnails: HashMap::new(),
+            thumbnail_fetch_rx: None,
         };
         app.load_games();
         app.load_rosters();
@@ -812,6 +840,10 @@ impl eframe::App for TourviaApp {
                 }
             }
         }
+        
+        // Image Picker Modal Popup (Global)
+        ui::image_picker::render_modal(self, ctx);
+        
         self.notifications.render(ctx);
     }
 }

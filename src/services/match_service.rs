@@ -108,6 +108,9 @@ impl MatchService {
             }
         }
 
+        // Trigger BYE sweep to auto-resolve any matches that just became Team vs BYE
+        sweep_byes(&self.match_repo, &m.tournament_id);
+
         Ok(())
     }
 
@@ -164,20 +167,22 @@ impl MatchService {
 
                 for m in &matches {
                     if m.status == MatchStatus::Completed {
+                        if m.player1_id.as_ref() == Some(&p.id) {
+                            points += m.score1;
+                        } else if m.player2_id.as_ref() == Some(&p.id) {
+                            points += m.score2;
+                        }
+
                         if m.winner_id.as_ref() == Some(&p.id) {
                             wins += 1;
-                            points += 3; // 3 points for a win
                         } else if m.winner_id.is_some() && (m.player1_id.as_ref() == Some(&p.id) || m.player2_id.as_ref() == Some(&p.id)) {
                             losses += 1;
                         } else if m.winner_id.is_none() && (m.player1_id.as_ref() == Some(&p.id) || m.player2_id.as_ref() == Some(&p.id)) {
-                            // Match is completed but no winner -> draw
                             draws += 1;
-                            points += 1; // 1 point for a draw
                         }
                     } else if m.status == MatchStatus::Bye {
                         if m.player1_id.as_ref() == Some(&p.id) || m.player2_id.as_ref() == Some(&p.id) {
                             // Byes do not grant wins or points in the standings table for elimination brackets
-                            // In Round Robin they don't give points either, they just mean no match.
                         }
                     }
                 }
@@ -197,5 +202,55 @@ impl MatchService {
             bye_matches,
             standings,
         })
+    }
+}
+
+pub fn sweep_byes(match_repo: &Arc<dyn MatchRepository>, tournament_id: &str) {
+    let mut changes_made = true;
+    let mut propagated_byes = std::collections::HashSet::new();
+
+    while changes_made {
+        changes_made = false;
+        let current_matches = match_repo.get_matches_by_tournament(tournament_id).unwrap_or_default();
+        
+        for m in current_matches {
+            let has_p1 = m.player1_id.is_some() && !m.player1_name.is_empty();
+            let has_p2 = m.player2_id.is_some() && !m.player2_name.is_empty();
+            
+            let p1_bye = m.player1_name == "BYE" || m.player1_id.as_deref() == Some("BYE_ID");
+            let p2_bye = m.player2_name == "BYE" || m.player2_id.as_deref() == Some("BYE_ID");
+            
+            if (m.status == MatchStatus::Pending || m.status == MatchStatus::Bye || m.status == MatchStatus::InProgress) && has_p1 && has_p2 {
+                if (p1_bye || p2_bye) && !propagated_byes.contains(&m.id) {
+                    
+                    let winner_id;
+                    let winner_name;
+                    
+                    if p1_bye && p2_bye {
+                        winner_id = Some("BYE_ID".to_string());
+                        winner_name = "BYE".to_string();
+                    } else if p1_bye {
+                        winner_id = m.player2_id.clone();
+                        winner_name = m.player2_name.clone();
+                    } else {
+                        winner_id = m.player1_id.clone();
+                        winner_name = m.player1_name.clone();
+                    }
+                    
+                    match_repo.update_match_score(&m.id, 0, 0, &MatchStatus::Bye, winner_id.as_deref()).unwrap_or_default();
+                    
+                    if let (Some(ref w_id), Some(ref next_id)) = (&winner_id, &m.next_match_id) {
+                        match_repo.set_match_player(next_id, m.next_match_slot, w_id, &winner_name).unwrap_or_default();
+                    }
+                    
+                    if let Some(ref loser_next_id) = m.loser_next_match_id {
+                        match_repo.set_match_player(loser_next_id, m.loser_next_match_slot, "BYE_ID", "BYE").unwrap_or_default();
+                    }
+                    
+                    propagated_byes.insert(m.id.clone());
+                    changes_made = true;
+                }
+            }
+        }
     }
 }

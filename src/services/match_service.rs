@@ -137,7 +137,7 @@ impl MatchService {
         Ok(matches.iter().all(|m| m.status == MatchStatus::Completed || m.status == MatchStatus::Bye))
     }
 
-    pub fn get_champion(&self, tournament_id: &str) -> Result<Option<String>, String> {
+    pub fn get_champion(&self, tournament_id: &str) -> Result<Option<(String, String)>, String> {
         let matches = self.match_repo.get_matches_by_tournament(tournament_id)
             .map_err(|e| format!("Database error: {}", e))?;
 
@@ -157,6 +157,7 @@ impl MatchService {
             let participants = self.participant_repo.get_participants_by_tournament(tournament_id)
                 .map_err(|e| format!("Database error: {}", e))?;
 
+            let mut best_id: Option<String> = None;
             let mut best_name: Option<String> = None;
             let mut best_wins: i32 = -1;
             let mut best_diff: i32 = i32::MIN;
@@ -183,11 +184,15 @@ impl MatchService {
                 if wins > best_wins || (wins == best_wins && diff > best_diff) {
                     best_wins = wins;
                     best_diff = diff;
+                    best_id = Some(p.id.clone());
                     best_name = Some(p.name.clone());
                 }
             }
 
-            return Ok(best_name);
+            if let (Some(id), Some(name)) = (best_id, best_name) {
+                return Ok(Some((id, name)));
+            }
+            return Ok(None);
         }
 
         // For elimination brackets: champion = winner of the final match
@@ -197,9 +202,9 @@ impl MatchService {
             if fm.status == MatchStatus::Completed {
                 if let Some(ref winner_id) = fm.winner_id {
                     if fm.player1_id.as_ref() == Some(winner_id) {
-                        return Ok(Some(fm.player1_name.clone()));
+                        return Ok(Some((fm.player1_id.clone().unwrap(), fm.player1_name.clone())));
                     } else {
-                        return Ok(Some(fm.player2_name.clone()));
+                        return Ok(Some((fm.player2_id.clone().unwrap(), fm.player2_name.clone())));
                     }
                 }
             }

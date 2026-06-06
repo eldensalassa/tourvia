@@ -334,25 +334,30 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
 
                                             // Delete
                                             if app.confirm_delete == Some(idx) {
-                                                if ui
+                                                let response = ui
                                                     .add_sized(Vec2::new(32.0, 32.0), egui::Button::new(RichText::new("✓").color(theme::BG_DARK())).fill(theme::ERROR()).corner_radius(theme::button_rounding()))
-                                                    .on_hover_text("Confirm Delete")
-                                                    .clicked()
-                                                {
+                                                    .on_hover_text("Confirm Delete");
+                                                    
+                                                if response.clicked() {
                                                     app.delete_tournament_at(idx);
                                                     app.confirm_delete = None;
+                                                } else if response.clicked_elsewhere() {
+                                                    // Only clear if another action hasn't already modified it in this frame
+                                                    if app.confirm_delete == Some(idx) {
+                                                        app.confirm_delete = None;
+                                                    }
                                                 }
                                             } else {
-                                                if ui
+                                                let response = ui
                                                     .add_sized(
                                                         Vec2::new(32.0, 32.0),
                                                         egui::Button::new(RichText::new("🗑").color(theme::ERROR()))
                                                             .fill(theme::BG_CARD_HOVER())
                                                             .corner_radius(theme::button_rounding())
                                                     )
-                                                    .on_hover_text("Delete Tournament")
-                                                    .clicked()
-                                                {
+                                                    .on_hover_text("Delete Tournament");
+                                                    
+                                                if response.clicked() {
                                                     app.confirm_delete = Some(idx);
                                                 }
                                             }

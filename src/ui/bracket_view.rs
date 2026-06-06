@@ -3,6 +3,67 @@ use egui::{self, Ui, Pos2, Rect, Vec2, Stroke, StrokeKind, RichText, Sense, Font
 use crate::app::TourviaApp;
 use crate::domain::match_model::{MatchStatus, BracketType};
 use crate::domain::tournament::TournamentType;
+
+fn render_champion_banner(app: &TourviaApp, ui: &mut egui::Ui, champion_id: &str, champion_name: &str) {
+    let t_name = app.active_tournament.as_ref().map(|t| t.name.as_str()).unwrap_or("Tournament");
+    let t_id = app.active_tournament.as_ref().map(|t| t.id.as_str()).unwrap_or("");
+    
+    // A clean, elevated frame with a solid accent border
+    egui::Frame::new()
+        .fill(crate::ui::theme::BG_PANEL())
+        .inner_margin(egui::Margin::symmetric(24, 16))
+        .outer_margin(egui::Margin::symmetric(0, 16))
+        .corner_radius(8.0)
+        .stroke(egui::Stroke::new(1.0, crate::ui::theme::ACCENT_BRONZE())) // Dynamic theme accent
+        .shadow(egui::epaint::Shadow {
+            offset: [0, 4],
+            blur: 16,
+            spread: 0,
+            color: egui::Color32::from_black_alpha(100),
+        })
+        .show(ui, |ui| {
+            ui.horizontal(|ui| {
+                // ====== Tournament Info Section ======
+                if let Some(t_texture) = app.tournament_logo_textures.get(t_id) {
+                    ui.add(egui::Image::new(t_texture).fit_to_exact_size(egui::vec2(48.0, 48.0)));
+                    ui.add_space(12.0);
+                }
+                
+                ui.vertical(|ui| {
+                    ui.add_space(8.0);
+                    ui.label(RichText::new("CHAMPION OF").size(10.0).color(crate::ui::theme::TEXT_MUTED()));
+                    ui.label(RichText::new(t_name).size(15.0).color(crate::ui::theme::TEXT_PRIMARY()).strong());
+                });
+                
+                ui.add_space(20.0);
+                
+                // Vertical divider
+                let (divider_rect, _) = ui.allocate_exact_size(egui::vec2(1.0, 48.0), egui::Sense::hover());
+                ui.painter().rect_filled(divider_rect, 0.0, crate::ui::theme::BORDER_SUBTLE());
+                
+                ui.add_space(20.0);
+                
+                // ====== Champion Info Section ======
+                if let Some(c_texture) = app.logo_textures.get(champion_id) {
+                    ui.add(egui::Image::new(c_texture).fit_to_exact_size(egui::vec2(48.0, 48.0)));
+                    ui.add_space(16.0);
+                } else {
+                    ui.label(RichText::new("🏆").size(40.0).color(crate::ui::theme::ACCENT_BRONZE()));
+                    ui.add_space(16.0);
+                }
+                
+                ui.vertical(|ui| {
+                    ui.add_space(10.0); // Center align tweak
+                    ui.label(
+                        RichText::new(champion_name)
+                            .size(26.0)
+                            .color(crate::ui::theme::ACCENT_BRONZE())
+                            .strong()
+                    );
+                });
+            });
+        });
+}
 use crate::ui::theme;
 
 const MATCH_CARD_WIDTH: f32 = 200.0;
@@ -29,7 +90,8 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
                             }
                         }
                         let tournament_logo = t.logo_data.as_deref();
-                        if let Err(e) = crate::utils::image_exporter::export_bracket(t, &app.rounds, &app.matches, path.to_str().unwrap(), app.champion_name.as_deref(), &participant_logos, tournament_logo) {
+                        let champ_name = app.champion.as_ref().map(|(_, name)| name.as_str());
+                        if let Err(e) = crate::utils::image_exporter::export_bracket(t, &app.rounds, &app.matches, path.to_str().unwrap(), champ_name, &participant_logos, tournament_logo) {
                             app.notifications.error(format!("Export failed: {}", e));
                         } else {
                             app.notifications.success("Bracket exported to PNG!");
@@ -60,19 +122,8 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
         return;
     }
 
-    if let Some(ref champion) = app.champion_name {
-        egui::Frame::new()
-            .fill(egui::Color32::from_rgba_premultiplied(205, 127, 50, 20))
-            .stroke(Stroke::new(1.0, theme::ACCENT_BRONZE()))
-            .corner_radius(6)
-            .inner_margin(egui::Margin::symmetric(16, 10))
-            .show(ui, |ui| {
-                ui.horizontal(|ui| {
-                    ui.label(RichText::new("🏆").size(20.0));
-                    ui.label(theme::champion_text(&format!("Champion: {}", champion)));
-                });
-            });
-        ui.add_space(16.0);
+    if let Some((champion_id, champion_name)) = &app.champion {
+        render_champion_banner(app, ui, champion_id, champion_name);
     }
 
     if let Some(ref t) = app.active_tournament {

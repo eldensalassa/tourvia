@@ -67,7 +67,7 @@ pub struct TourviaApp {
     pub rounds: Vec<Round>,
     pub matches: Vec<Match>,
     pub selected_match: Option<String>,
-    pub champion_name: Option<String>,
+    pub champion: Option<(String, String)>,
 
     // Form state
     pub new_tournament_name: String,
@@ -158,7 +158,7 @@ impl TourviaApp {
             rounds: Vec::new(),
             matches: Vec::new(),
             selected_match: None,
-            champion_name: None,
+            champion: None,
             new_tournament_name: String::new(),
             new_tournament_type: TournamentType::SingleElimination,
             new_tournament_description: String::new(),
@@ -319,7 +319,7 @@ impl TourviaApp {
             .get_matches_by_tournament(tournament_id)
             .unwrap_or_default();
 
-        self.champion_name = self.services.match_service.get_champion(tournament_id).unwrap_or(None);
+        self.champion = self.services.match_service.get_champion(tournament_id).unwrap_or(None);
 
         if self.logos_loaded_for.as_deref() != Some(tournament_id) {
             self.logo_textures.clear();

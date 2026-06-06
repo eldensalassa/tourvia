@@ -8,6 +8,21 @@ mod utils;
 use app::TourviaApp;
 use database::Database;
 
+fn load_icon() -> Option<egui::IconData> {
+    if let Ok(image) = image::load_from_memory(include_bytes!("assets/icon.ico")) {
+        let image = image.into_rgba8();
+        let (width, height) = image.dimensions();
+        let rgba = image.into_raw();
+        Some(egui::IconData {
+            rgba,
+            width,
+            height,
+        })
+    } else {
+        None
+    }
+}
+
 fn main() -> eframe::Result<()> {
     // Initialize logger
     env_logger::init();
@@ -16,11 +31,17 @@ fn main() -> eframe::Result<()> {
     let db = Database::open("tourvia.db").expect("Failed to open database");
 
     // Configure window
+    let mut viewport = egui::ViewportBuilder::default()
+        .with_title("Tourvia — Tournament Visualization & Administration")
+        .with_inner_size([1280.0, 800.0])
+        .with_min_inner_size([900.0, 600.0]);
+
+    if let Some(icon) = load_icon() {
+        viewport = viewport.with_icon(std::sync::Arc::new(icon));
+    }
+
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default()
-            .with_title("Tourvia — Tournament Visualization & Administration")
-            .with_inner_size([1280.0, 800.0])
-            .with_min_inner_size([900.0, 600.0]),
+        viewport,
         ..Default::default()
     };
 

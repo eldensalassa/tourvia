@@ -6,6 +6,7 @@ pub struct Roster {
     pub id: String,
     pub name: String,
     pub game: String,
+    pub description: String,
     #[serde(skip)]
     pub logo_data: Option<Vec<u8>>,
 }
@@ -16,6 +17,7 @@ impl Roster {
             id: Uuid::new_v4().to_string(),
             name,
             game,
+            description: String::new(),
             logo_data,
         }
     }

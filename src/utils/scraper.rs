@@ -1,5 +1,6 @@
+#![allow(dead_code)]
+
 use reqwest::blocking::Client;
-use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, ACCEPT_LANGUAGE, USER_AGENT, REFERER};
 
 #[derive(Clone, Debug)]
 pub struct ScrapedImage {
@@ -34,46 +35,50 @@ pub fn fetch_images_bing(query: &str) -> Result<Vec<ScrapedImage>, String> {
         .text()
         .map_err(|e| format!("Failed to read response: {}", e))?;
 
-    let mut results = Vec::new();
-    let mut seen_urls = std::collections::HashSet::new();
-
     // Bing embeds image data in a JSON object inside an HTML attribute: m="{&quot;murl&quot;:&quot;https://...&quot;}"
-    // We can extract murl (main image url) and t (title)
-    // Because it's HTML escaped, we match the encoded quotes (&quot;)
-    let re_murl = regex::Regex::new(r#"&quot;murl&quot;:&quot;(https?://[^&]+)&quot;"#)
-        .map_err(|e| format!("Regex error: {}", e))?;
-    let re_turl = regex::Regex::new(r#"&quot;turl&quot;:&quot;(https?://[^&]+)&quot;"#)
-        .map_err(|e| format!("Regex error: {}", e))?;
-    let re_title = regex::Regex::new(r#"&quot;t&quot;:&quot;([^&]+)&quot;"#)
-        .map_err(|e| format!("Regex error: {}", e))?;
+    let re_m = regex::Regex::new(r#"m="([^"]+)""#).map_err(|e| format!("Regex error: {}", e))?;
+    let re_murl = regex::Regex::new(r#"&quot;murl&quot;:&quot;(https?://[^&]+)&quot;"#).map_err(|e| format!("Regex error: {}", e))?;
+    let re_turl = regex::Regex::new(r#"&quot;turl&quot;:&quot;(https?://[^&]+)&quot;"#).map_err(|e| format!("Regex error: {}", e))?;
+    let re_title = regex::Regex::new(r#"&quot;t&quot;:&quot;([^&]+)&quot;"#).map_err(|e| format!("Regex error: {}", e))?;
 
-    let imgs: Vec<_> = re_murl.captures_iter(&html).map(|c| c[1].to_string()).collect();
-    let thumbs: Vec<_> = re_turl.captures_iter(&html).map(|c| c[1].to_string()).collect();
-    let titles: Vec<_> = re_title.captures_iter(&html).map(|c| c[1].to_string()).collect();
+    let mut results: Vec<ScrapedImage> = Vec::new();
+    let mut seen_urls: std::collections::HashSet<String> = std::collections::HashSet::new();
 
-    for i in 0..imgs.len() {
-        if i >= 20 { break; }
+    for cap in re_m.captures_iter(&html) {
+        let m_attr = &cap[1];
         
-        let mut img_url = imgs[i].clone();
-        img_url = img_url.replace("\\/", "/");
+        let murl = match re_murl.captures(m_attr) {
+            Some(c) => c[1].to_string(),
+            None => continue,
+        };
         
-        let mut thumb_url = thumbs.get(i).unwrap_or(&img_url).clone();
-        thumb_url = thumb_url.replace("\\/", "/").replace("&amp;", "&");
-
+        let turl = match re_turl.captures(m_attr) {
+            Some(c) => c[1].to_string(),
+            None => murl.clone(),
+        };
+        
+        let title = match re_title.captures(m_attr) {
+            Some(c) => c[1].to_string(),
+            None => "Image".to_string(),
+        };
+        
+        let img_url = murl.replace("\\/", "/");
+        let thumb_url = turl.replace("\\/", "/").replace("&amp;", "&");
+        let title_clean = title.replace("\\/", "/");
+        
         if seen_urls.contains(&img_url) { continue; }
         seen_urls.insert(img_url.clone());
-
-        let mut title = titles.get(i).unwrap_or(&"Image".to_string()).clone();
-        title = title.replace("\\/", "/");
-
+        
         results.push(ScrapedImage {
-            url: img_url.clone(),
+            url: img_url,
             thumbnail: thumb_url,
-            title,
+            title: title_clean,
         });
+        
+        if results.len() >= 20 { break; }
     }
 
-    // Filter to prioritize liquipedia, wikipedia, and fandom
+    // Sort to prioritize liquipedia, wikipedia, and fandom
     let mut wiki_results: Vec<ScrapedImage> = Vec::new();
     let mut other_results: Vec<ScrapedImage> = Vec::new();
 
@@ -90,10 +95,12 @@ pub fn fetch_images_bing(query: &str) -> Result<Vec<ScrapedImage>, String> {
         }
     }
 
+    wiki_results.extend(other_results);
+
     if !wiki_results.is_empty() {
         Ok(wiki_results)
     } else {
-        Err("No Wikipedia or Liquipedia images found. Try a different query.".to_string())
+        Err("No images found. Try a different query.".to_string())
     }
 }
 

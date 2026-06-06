@@ -30,6 +30,7 @@ impl TournamentService {
         t_type: TournamentType,
         description: &str,
         game_name: &str,
+        logo_data: Option<Vec<u8>>,
     ) -> Result<Tournament, String> {
         if name.trim().is_empty() {
             return Err("Tournament name cannot be empty.".to_string());
@@ -40,6 +41,7 @@ impl TournamentService {
             t_type,
             description.trim().to_string(),
             game_name.trim().to_string(),
+            logo_data,
         );
         self.tournament_repo.create_tournament(&tournament)
             .map_err(|e| format!("Database error: {}", e))?;

@@ -217,7 +217,7 @@ impl BracketGeneratorService {
             // Generate Grand Final
             let gf_round = Round::new(tournament_id.to_string(), 1, "Grand Final".to_string(), BracketType::GrandFinal);
             self.round_repo.create_round(&gf_round).map_err(|e| format!("Failed to create GF round: {}", e))?;
-            let mut gf_match = Match::new(
+            let gf_match = Match::new(
                 tournament_id.to_string(),
                 gf_round.id.clone(),
                 0,
@@ -238,6 +238,28 @@ impl BracketGeneratorService {
             
             lower_matches.push(vec![gf_match]);
             lower_rounds.push(gf_round);
+        } else if !is_double && total_rounds >= 2 {
+            // Generate 3rd Place Playoff for Single Elimination
+            let tp_round = Round::new(tournament_id.to_string(), 1, "3rd Place Playoff".to_string(), BracketType::ThirdPlace);
+            self.round_repo.create_round(&tp_round).map_err(|e| format!("Failed to create 3rd place round: {}", e))?;
+            
+            let tp_match = Match::new(
+                tournament_id.to_string(),
+                tp_round.id.clone(),
+                0,
+                None,
+                0,
+                BracketType::ThirdPlace,
+            );
+            
+            let sf_round_idx = total_rounds as usize - 2;
+            for m_idx in 0..all_matches[sf_round_idx].len() {
+                all_matches[sf_round_idx][m_idx].loser_next_match_id = Some(tp_match.id.clone());
+                all_matches[sf_round_idx][m_idx].loser_next_match_slot = (m_idx % 2) as i32 + 1;
+            }
+            
+            lower_matches.push(vec![tp_match]);
+            lower_rounds.push(tp_round);
         }
 
         let mut flat_matches = Vec::new();

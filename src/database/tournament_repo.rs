@@ -7,8 +7,8 @@ impl TournamentRepository for Database {
     fn create_tournament(&self, t: &Tournament) -> Result<(), String> {
         let conn = self.conn.lock().unwrap();
         conn.execute(
-            "INSERT INTO tournaments (id, name, tournament_type, participant_count, status, created_at, description, game_name)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            "INSERT INTO tournaments (id, name, tournament_type, participant_count, status, created_at, description, game_name, logo_data)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
             params![
                 t.id,
                 t.name,
@@ -18,6 +18,7 @@ impl TournamentRepository for Database {
                 t.created_at,
                 t.description,
                 t.game_name,
+                t.logo_data,
             ],
         ).map_err(|e| e.to_string())?;
         Ok(())
@@ -27,7 +28,7 @@ impl TournamentRepository for Database {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
             "SELECT id, name, tournament_type, participant_count, status, created_at,
-                    COALESCE(description, '') as description, COALESCE(game_name, '') as game_name
+                    COALESCE(description, '') as description, COALESCE(game_name, '') as game_name, logo_data
              FROM tournaments WHERE id = ?1",
         ).map_err(|e| e.to_string())?;
 
@@ -41,6 +42,7 @@ impl TournamentRepository for Database {
                 created_at: row.get(5)?,
                 description: row.get(6)?,
                 game_name: row.get(7)?,
+                logo_data: row.get(8)?,
             })
         }).map_err(|e| e.to_string())?;
 
@@ -55,7 +57,7 @@ impl TournamentRepository for Database {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
             "SELECT id, name, tournament_type, participant_count, status, created_at,
-                    COALESCE(description, '') as description, COALESCE(game_name, '') as game_name
+                    COALESCE(description, '') as description, COALESCE(game_name, '') as game_name, logo_data
              FROM tournaments ORDER BY created_at DESC",
         ).map_err(|e| e.to_string())?;
 
@@ -69,6 +71,7 @@ impl TournamentRepository for Database {
                 created_at: row.get(5)?,
                 description: row.get(6)?,
                 game_name: row.get(7)?,
+                logo_data: row.get(8)?,
             })
         }).map_err(|e| e.to_string())?;
 

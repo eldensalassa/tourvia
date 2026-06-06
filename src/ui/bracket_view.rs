@@ -88,64 +88,181 @@ fn render_round_robin_view(app: &mut TourviaApp, ui: &mut Ui) {
                     .corner_radius(theme::card_rounding())
                     .inner_margin(egui::Margin::same(16))
                     .show(ui, |ui| {
-                        ui.label(theme::section_header(&round.name));
-                        ui.add_space(8.0);
-
                         let round_matches: Vec<_> = app.matches.iter().filter(|m| m.round_id == round.id).collect();
-
-                        for m in &round_matches {
-                            let is_selected = app.selected_match.as_ref() == Some(&m.id);
-                            let bg = if is_selected { theme::BG_ELEVATED() } else { theme::BG_CARD() };
-                            let border = if is_selected { theme::ACCENT_BRONZE() } else { theme::BORDER_SUBTLE() };
-
-                            let resp = egui::Frame::new()
-                                .fill(bg)
-                                .stroke(Stroke::new(if is_selected { 1.5 } else { 0.5 }, border))
-                                .corner_radius(4)
-                                .inner_margin(egui::Margin::symmetric(16, 12))
-                                .show(ui, |ui| {
-                                    ui.horizontal(|ui| {
-                                        let p1 = if m.player1_name.is_empty() { "TBD" } else { &m.player1_name };
-                                        let p1_color = if m.winner_id.is_some() && m.player1_id == m.winner_id { theme::SUCCESS() } else { theme::TEXT_PRIMARY() };
-                                        ui.allocate_ui_with_layout(Vec2::new(150.0, 20.0), egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                            ui.label(RichText::new(p1).size(14.0).color(p1_color).strong());
-                                            if m.status == MatchStatus::Completed {
-                                                ui.add_space(8.0);
-                                                ui.label(RichText::new(m.score1.to_string()).size(14.0).color(p1_color).strong());
-                                            }
-                                        });
-
-                                        ui.allocate_ui_with_layout(Vec2::new(40.0, 20.0), egui::Layout::centered_and_justified(egui::Direction::LeftToRight), |ui| {
-                                            ui.label(RichText::new("vs").size(12.0).color(theme::TEXT_MUTED()));
-                                        });
-
-                                        let p2 = if m.player2_name.is_empty() { "TBD" } else { &m.player2_name };
-                                        let p2_color = if m.winner_id.is_some() && m.player2_id == m.winner_id { theme::SUCCESS() } else { theme::TEXT_PRIMARY() };
-                                        ui.allocate_ui_with_layout(Vec2::new(150.0, 20.0), egui::Layout::left_to_right(egui::Align::Center), |ui| {
-                                            if m.status == MatchStatus::Completed {
-                                                ui.label(RichText::new(m.score2.to_string()).size(14.0).color(p2_color).strong());
-                                                ui.add_space(8.0);
-                                            }
-                                            ui.label(RichText::new(p2).size(14.0).color(p2_color).strong());
-                                        });
-
-                                        let (sc, st) = match m.status {
-                                            MatchStatus::Completed => (theme::SUCCESS(), "✅"),
-                                            MatchStatus::InProgress => (theme::ACCENT_BRONZE(), "▶"),
-                                            MatchStatus::Bye => (theme::WARNING(), "BYE"),
-                                            MatchStatus::Pending => (theme::TEXT_MUTED(), "⏳"),
-                                        };
-                                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                            ui.label(RichText::new(st).size(13.0).color(sc));
-                                        });
-                                    });
+                        
+                        ui.horizontal(|ui| {
+                            ui.label(theme::section_header(&round.name));
+                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                let total = round_matches.len();
+                                let completed = round_matches.iter().filter(|m| m.status == MatchStatus::Completed).count();
+                                let mut text = format!("{}/{} Completed", completed, total);
+                                let mut color = theme::TEXT_MUTED();
+                                let mut bg = theme::BG_ELEVATED();
+                                if total > 0 && completed == total {
+                                    text = "Round Complete".to_string();
+                                    color = theme::SUCCESS();
+                                    bg = theme::SUCCESS().linear_multiply(0.1);
+                                }
+                                egui::Frame::new().fill(bg).corner_radius(12).inner_margin(egui::Margin::symmetric(10, 4)).show(ui, |ui| {
+                                    ui.label(RichText::new(text).size(11.0).color(color).strong());
                                 });
+                            });
+                        });
+                        ui.add_space(16.0);
 
-                            if resp.response.interact(Sense::click()).clicked() {
-                                clicked_match_id = Some(m.id.clone());
+                        ui.horizontal_wrapped(|ui| {
+                            ui.spacing_mut().item_spacing = Vec2::new(12.0, 12.0);
+
+                            for m in &round_matches {
+                                let is_selected = app.selected_match.as_ref() == Some(&m.id);
+                                let card_width = 240.0;
+                                let card_height = 96.0;
+
+                                let (rect, response) = ui.allocate_exact_size(Vec2::new(card_width, card_height), Sense::click());
+
+                                let is_hovered = response.hovered();
+                                let bg = if is_selected { theme::BG_ELEVATED() } else if is_hovered { theme::BG_CARD_HOVER() } else { theme::BG_CARD() };
+                                let border_color = if is_selected { theme::ACCENT_BRONZE() } else { theme::BORDER_SUBTLE() };
+                                let stroke_w = if is_selected { 2.0 } else { 1.0 };
+                                let radius = 8.0;
+
+                                // Shadow
+                                let shadow_y = if is_hovered || is_selected { 3.0 } else { 1.5 };
+                                ui.painter().rect_filled(rect.translate(Vec2::new(0.0, shadow_y)), radius, egui::Color32::from_black_alpha(40));
+
+                                // Card bg + border
+                                ui.painter().rect_filled(rect, radius, bg);
+                                ui.painter().rect_stroke(rect, radius, Stroke::new(stroke_w, border_color), StrokeKind::Inside);
+
+                                let painter = ui.painter_at(rect);
+
+                                // === Absolute positions ===
+                                let col1_cx = rect.left() + card_width * 0.22;
+                                let center_cx = rect.center().x;
+                                let col2_cx = rect.right() - card_width * 0.22;
+
+                                let logo_box = 36.0; // bounding box for logo (aspect-ratio preserved)
+                                let logo_center_y = rect.top() + 12.0 + logo_box / 2.0;
+                                let name_y = rect.top() + 12.0 + logo_box + 8.0;
+                                let score_y = rect.top() + 30.0;
+                                let badge_top_y = rect.top() + 54.0;
+
+                                // Subtle vertical separator lines
+                                let sep_x1 = rect.left() + card_width * 0.37;
+                                let sep_x2 = rect.right() - card_width * 0.37;
+                                let sep_color = theme::BORDER_SUBTLE().linear_multiply(0.4);
+                                painter.line_segment([Pos2::new(sep_x1, rect.top() + 10.0), Pos2::new(sep_x1, rect.bottom() - 10.0)], Stroke::new(0.5, sep_color));
+                                painter.line_segment([Pos2::new(sep_x2, rect.top() + 10.0), Pos2::new(sep_x2, rect.bottom() - 10.0)], Stroke::new(0.5, sep_color));
+
+                                // --- Helper: draw logo with preserved aspect ratio ---
+                                let draw_logo = |painter: &egui::Painter, cx: f32, tex: &egui::TextureHandle| {
+                                    let tex_size = tex.size();
+                                    let tw = tex_size[0] as f32;
+                                    let th = tex_size[1] as f32;
+                                    if tw > 0.0 && th > 0.0 {
+                                        let aspect = tw / th;
+                                        let (draw_w, draw_h) = if aspect > 1.0 {
+                                            (logo_box, logo_box / aspect)
+                                        } else {
+                                            (logo_box * aspect, logo_box)
+                                        };
+                                        let logo_rect = Rect::from_center_size(
+                                            Pos2::new(cx, logo_center_y),
+                                            Vec2::new(draw_w, draw_h),
+                                        );
+                                        painter.image(tex.id(), logo_rect, Rect::from_min_max(Pos2::ZERO, Pos2::new(1.0, 1.0)), egui::Color32::WHITE);
+                                    }
+                                };
+
+                                // --- Helper: draw placeholder circle ---
+                                let draw_placeholder = |painter: &egui::Painter, cx: f32| {
+                                    painter.circle_stroke(
+                                        Pos2::new(cx, logo_center_y),
+                                        14.0,
+                                        Stroke::new(1.0, theme::BORDER_SUBTLE()),
+                                    );
+                                    painter.text(
+                                        Pos2::new(cx, logo_center_y),
+                                        Align2::CENTER_CENTER,
+                                        "?",
+                                        FontId::new(12.0, FontFamily::Proportional),
+                                        theme::TEXT_MUTED(),
+                                    );
+                                };
+
+                                // --- Player 1 ---
+                                let p1 = if m.player1_name.is_empty() { "TBD" } else { &m.player1_name };
+                                let p1_color = if m.winner_id.is_some() && m.player1_id == m.winner_id { theme::SUCCESS() } else { theme::TEXT_PRIMARY() };
+
+                                let mut p1_has_logo = false;
+                                if let Some(ref id) = m.player1_id {
+                                    if let Some(tex) = app.logo_textures.get(id) {
+                                        draw_logo(&painter, col1_cx, tex);
+                                        p1_has_logo = true;
+                                    }
+                                }
+                                if !p1_has_logo {
+                                    draw_placeholder(&painter, col1_cx);
+                                }
+
+                                let p1_trunc: String = if p1.chars().count() > 12 { format!("{}…", p1.chars().take(11).collect::<String>()) } else { p1.to_string() };
+                                painter.text(Pos2::new(col1_cx, name_y), Align2::CENTER_TOP, &p1_trunc, FontId::new(10.0, FontFamily::Proportional), p1_color);
+
+                                // --- Center: Score / VS ---
+                                if m.status == MatchStatus::Completed {
+                                    painter.text(Pos2::new(center_cx, score_y), Align2::CENTER_CENTER, format!("{} - {}", m.score1, m.score2), FontId::new(18.0, FontFamily::Proportional), theme::TEXT_PRIMARY());
+                                } else {
+                                    painter.text(Pos2::new(center_cx, score_y), Align2::CENTER_CENTER, "VS", FontId::new(14.0, FontFamily::Proportional), theme::TEXT_MUTED());
+                                }
+
+                                // --- Center: Status badge ---
+                                let (badge_bg, badge_fg) = match m.status {
+                                    MatchStatus::Completed => (theme::SUCCESS().linear_multiply(0.2), theme::SUCCESS()),
+                                    MatchStatus::InProgress => (theme::ACCENT_BRONZE().linear_multiply(0.2), theme::ACCENT_BRONZE()),
+                                    MatchStatus::Bye => (theme::WARNING().linear_multiply(0.2), theme::WARNING()),
+                                    MatchStatus::Pending => (theme::BG_PANEL(), theme::TEXT_MUTED()),
+                                };
+                                let badge_label = match m.status {
+                                    MatchStatus::Completed => "FT",
+                                    MatchStatus::InProgress => "LIVE",
+                                    MatchStatus::Bye => "BYE",
+                                    MatchStatus::Pending => "PENDING",
+                                };
+                                let badge_galley = painter.layout_no_wrap(badge_label.to_string(), FontId::new(9.0, FontFamily::Proportional), badge_fg);
+                                let bw = badge_galley.size().x + 16.0;
+                                let bh = badge_galley.size().y + 8.0;
+                                let badge_rect = Rect::from_min_size(Pos2::new(center_cx - bw / 2.0, badge_top_y), Vec2::new(bw, bh));
+                                painter.rect_filled(badge_rect, 4.0, badge_bg);
+                                painter.galley(
+                                    Pos2::new(center_cx - badge_galley.size().x / 2.0, badge_top_y + 4.0),
+                                    badge_galley,
+                                    egui::Color32::TRANSPARENT,
+                                );
+
+                                // --- Player 2 ---
+                                let p2 = if m.player2_name.is_empty() { "TBD" } else { &m.player2_name };
+                                let p2_color = if m.winner_id.is_some() && m.player2_id == m.winner_id { theme::SUCCESS() } else { theme::TEXT_PRIMARY() };
+
+                                let mut p2_has_logo = false;
+                                if let Some(ref id) = m.player2_id {
+                                    if let Some(tex) = app.logo_textures.get(id) {
+                                        draw_logo(&painter, col2_cx, tex);
+                                        p2_has_logo = true;
+                                    }
+                                }
+                                if !p2_has_logo {
+                                    draw_placeholder(&painter, col2_cx);
+                                }
+
+                                let p2_trunc: String = if p2.chars().count() > 12 { format!("{}…", p2.chars().take(11).collect::<String>()) } else { p2.to_string() };
+                                painter.text(Pos2::new(col2_cx, name_y), Align2::CENTER_TOP, &p2_trunc, FontId::new(10.0, FontFamily::Proportional), p2_color);
+
+                                // Click handler
+                                if response.clicked() {
+                                    clicked_match_id = Some(m.id.clone());
+                                }
                             }
-                            ui.add_space(4.0);
-                        }
+                        });
                     });
             }
         });
@@ -161,6 +278,7 @@ fn render_elimination_bracket(app: &mut TourviaApp, ui: &mut Ui) {
     let upper_rounds: Vec<_> = app.rounds.iter().filter(|r| r.bracket_type == BracketType::Upper).collect();
     let lower_rounds: Vec<_> = app.rounds.iter().filter(|r| r.bracket_type == BracketType::Lower).collect();
     let gf_rounds: Vec<_> = app.rounds.iter().filter(|r| r.bracket_type == BracketType::GrandFinal).collect();
+    let tp_rounds: Vec<_> = app.rounds.iter().filter(|r| r.bracket_type == BracketType::ThirdPlace).collect();
 
     let num_upper_rounds = upper_rounds.len();
     let first_round_matches_upper = if !upper_rounds.is_empty() {
@@ -184,7 +302,10 @@ fn render_elimination_bracket(app: &mut TourviaApp, ui: &mut Ui) {
     
     let upper_height = first_round_matches_upper as f32 * (card_h + v_gap) + header_h + 40.0 * zoom;
     let lower_height = first_round_matches_lower as f32 * (card_h + v_gap) + header_h + 40.0 * zoom;
-    let total_height = upper_height + if num_lower_rounds > 0 { lower_height + 50.0 * zoom } else { 0.0 };
+    let mut total_height = upper_height + if num_lower_rounds > 0 { lower_height + 50.0 * zoom } else { 0.0 };
+    if !tp_rounds.is_empty() {
+        total_height += card_h + header_h + 80.0 * zoom;
+    }
 
     let mut clicked_match_id = None;
 
@@ -196,10 +317,10 @@ fn render_elimination_bracket(app: &mut TourviaApp, ui: &mut Ui) {
                 Sense::click(),
             );
 
-            let mut origin = response.rect.left_top();
+            let origin = response.rect.left_top();
 
             // Helper closure to draw a bracket tree
-            let mut draw_tree = |rounds: &[&crate::domain::round::Round], start_origin: Pos2, tree_height: f32, label: &str| {
+            let mut draw_tree = |rounds: &[&crate::domain::round::Round], start_origin: Pos2, _tree_height: f32, label: &str| {
                 if rounds.is_empty() { return; }
                 
                 // Tree Label
@@ -350,18 +471,19 @@ fn render_elimination_bracket(app: &mut TourviaApp, ui: &mut Ui) {
             
             if !gf_rounds.is_empty() {
                 let gf_x = origin.x + max_rounds as f32 * (card_w + h_gap);
-                let gf_y = origin.y + upper_height / 2.0; // Place it centrally between upper and lower?
+                let _gf_y = origin.y + upper_height / 2.0; // Place it centrally between upper and lower?
                 // Actually, upper_height/2 is roughly vertically aligned with the middle of the upper bracket.
                 // Let's place it halfway down the total height.
                 let gf_origin = Pos2::new(gf_x, origin.y + (total_height - card_h - header_h) / 2.0 - 40.0 * zoom);
-                draw_tree(&gf_rounds, gf_origin, card_h + header_h + 40.0 * zoom, "Grand Final");
+                draw_tree(&gf_rounds, gf_origin, card_h + header_h + 40.0 * zoom, "");
                 
                 // Draw manual connections from Upper Final and Lower Final to GF
                 if let Some(_gf_match) = app.matches.iter().find(|m| m.round_id == gf_rounds[0].id) {
-                    let get_final_match_y = |rounds: &[&crate::domain::round::Round], tree_origin: Pos2| -> f32 {
+                    let get_final_match_y = |rounds: &[&crate::domain::round::Round], start_origin: Pos2| -> f32 {
+                        let tree_origin_y = start_origin.y + 40.0 * zoom;
                         let first_round_count = app.matches.iter().filter(|m| m.round_id == rounds[0].id).count();
                         let first_round_total_height = first_round_count as f32 * (card_h + v_gap);
-                        tree_origin.y + header_h + (first_round_total_height - card_h) / 2.0
+                        tree_origin_y + header_h + (first_round_total_height - card_h) / 2.0
                     };
 
                     let gf_card_x = gf_origin.x + h_gap / 2.0;
@@ -392,6 +514,31 @@ fn render_elimination_bracket(app: &mut TourviaApp, ui: &mut Ui) {
                     // Merged horizontal line into GF card
                     painter.line_segment([Pos2::new(mid_x, gf_center_y), Pos2::new(gf_card_x, gf_center_y)], stroke);
                 }
+            }
+
+            if !tp_rounds.is_empty() {
+                let tp_x = origin.x + (max_rounds as f32 - 1.0).max(0.0) * (card_w + h_gap);
+                
+                let mut tp_y = origin.y + upper_height + 1.0 * zoom;
+                if !upper_rounds.is_empty() {
+                    let get_final_match_y = |rounds: &[&crate::domain::round::Round], start_origin: Pos2| -> f32 {
+                        let tree_origin_y = start_origin.y + 40.0 * zoom;
+                        let first_round_count = app.matches.iter().filter(|m| m.round_id == rounds[0].id).count();
+                        let first_round_total_height = first_round_count as f32 * (card_h + v_gap);
+                        tree_origin_y + header_h + (first_round_total_height - card_h) / 2.0
+                    };
+                    
+                    let upper_final_y = get_final_match_y(&upper_rounds, origin);
+                    
+                    // We want the 3rd place match to be below the Final, but we must also leave room for its own round header.
+                    // tp_card_y = upper_final_y + card_h + header_h + 20.0 * zoom
+                    // We know tp_card_y = tp_origin.y + 40.0 * zoom + header_h + v_gap / 2.0 (since tp_rounds has 1 match)
+                    let target_y = upper_final_y + card_h + header_h + 20.0 * zoom;
+                    tp_y = target_y - 15.0 * zoom - header_h - v_gap / 2.0;
+                }
+                
+                let tp_origin = Pos2::new(tp_x, tp_y);
+                draw_tree(&tp_rounds, tp_origin, card_h + header_h + 20.0 * zoom, "");
             }
 
         });

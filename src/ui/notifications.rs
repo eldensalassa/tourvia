@@ -1,4 +1,4 @@
-use egui::{Align2, Color32, Frame, Id, Margin, RichText, Stroke, Ui, Vec2};
+use egui::{Color32, Frame, Id, Margin, RichText, Stroke};
 use std::time::{Duration, Instant};
 
 use crate::ui::theme;

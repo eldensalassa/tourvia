@@ -297,6 +297,7 @@ fn trigger_search(app: &mut TourviaApp) {
         Some(crate::app::ImageTarget::ExistingRosterLogo(id)) => {
             app.global_rosters.iter().find(|r| &r.id == id).map(|r| r.game.clone())
         }
+        Some(crate::app::ImageTarget::NewTournamentLogo) => Some(app.new_tournament_game.clone()),
         _ => None,
     };
     
@@ -525,6 +526,12 @@ fn apply_image_to_target(app: &mut TourviaApp, ctx: &egui::Context, processed: V
                         app.member_photo_textures.insert(member_id.clone(), texture);
                     }
                 }
+            }
+        }
+        ImageTarget::NewTournamentLogo => {
+            app.new_tournament_logo = Some(processed.clone());
+            if let Some(texture) = crate::app::TourviaApp::decode_logo(ctx, "new_tournament_logo", &processed) {
+                app.tournament_logo_textures.insert("__new_tournament_logo".to_string(), texture);
             }
         }
     }

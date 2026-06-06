@@ -1,4 +1,4 @@
-use image::{RgbaImage, Rgba, ImageBuffer};
+use image::{Rgba, ImageBuffer};
 use imageproc::drawing::{draw_line_segment_mut, draw_text_mut, draw_filled_rect_mut};
 use imageproc::rect::Rect;
 use ab_glyph::{FontRef, PxScale};
@@ -52,7 +52,7 @@ pub fn export_bracket(
     let match_height = 60;
     let col_spacing = 300;
     let start_x = 50;
-    let mut current_y = 150;
+    let current_y = 150;
     
     // We will do a simple column-based rendering instead of a complex tree 
     // if the tree logic is too hard, but wait, we can do exactly what the UI does!

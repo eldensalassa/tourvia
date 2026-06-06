@@ -39,6 +39,7 @@ pub enum BracketType {
     Upper,
     Lower,
     GrandFinal,
+    ThirdPlace,
 }
 
 impl BracketType {
@@ -47,6 +48,7 @@ impl BracketType {
             BracketType::Upper => "Upper",
             BracketType::Lower => "Lower",
             BracketType::GrandFinal => "GrandFinal",
+            BracketType::ThirdPlace => "ThirdPlace",
         }
     }
 
@@ -54,6 +56,7 @@ impl BracketType {
         match s {
             "Lower" => BracketType::Lower,
             "GrandFinal" => BracketType::GrandFinal,
+            "ThirdPlace" => BracketType::ThirdPlace,
             _ => BracketType::Upper,
         }
     }

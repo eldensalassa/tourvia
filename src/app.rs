@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use std::collections::HashMap;
 
 use crate::database::Database;
@@ -40,6 +41,7 @@ pub enum ImageTarget {
     ExistingRosterLogo(String),
     NewMemberPhoto,
     ExistingMemberPhoto(String),
+    NewTournamentLogo,
 }
 
 
@@ -93,8 +95,10 @@ pub struct TourviaApp {
     pub show_bulk_add: bool,
 
     // Logo texture cache
-    pub logo_textures: HashMap<String, egui::TextureHandle>,
+    pub logo_textures: HashMap<String, egui::TextureHandle>, // for participants
+    pub tournament_logo_textures: HashMap<String, egui::TextureHandle>,
     pub logos_loaded_for: Option<String>,
+    pub new_tournament_logo: Option<Vec<u8>>,
 
     // Zoom
     pub bracket_zoom: f32,
@@ -124,6 +128,10 @@ pub struct TourviaApp {
     pub image_download_rx: Option<std::sync::mpsc::Receiver<Result<Vec<u8>, String>>>,
     pub image_picker_thumbnails: std::collections::HashMap<String, egui::TextureHandle>,
     pub thumbnail_fetch_rx: Option<std::sync::mpsc::Receiver<(String, egui::ColorImage)>>,
+
+    // Participant Preview
+    pub participant_preview_roster: Option<crate::domain::roster::Roster>,
+    pub participant_preview_members: Vec<crate::domain::roster::RosterMember>,
 }
 
 impl TourviaApp {
@@ -132,7 +140,7 @@ impl TourviaApp {
         
         let services = AppServices {
             tournament: TournamentService::new(db.clone(), db.clone(), db.clone(), db.clone()),
-            match_service: MatchService::new(db.clone(), db.clone(), db.clone()),
+            match_service: MatchService::new(db.clone(), db.clone(), db.clone(), db.clone()),
             bracket_generator: BracketGeneratorService::new(db.clone(), db.clone()),
         };
 
@@ -155,6 +163,7 @@ impl TourviaApp {
             new_tournament_type: TournamentType::SingleElimination,
             new_tournament_description: String::new(),
             new_tournament_game: String::new(),
+            new_tournament_logo: None,
             new_participant_name: String::new(),
             show_match_modal: false,
             score_input: [String::new(), String::new()],
@@ -165,6 +174,7 @@ impl TourviaApp {
             bulk_add_text: String::new(),
             show_bulk_add: false,
             logo_textures: HashMap::new(),
+            tournament_logo_textures: HashMap::new(),
             logos_loaded_for: None,
             bracket_zoom: 1.0,
             global_rosters: Vec::new(),
@@ -185,8 +195,10 @@ impl TourviaApp {
             image_picker_loading: false,
             image_fetch_rx: None,
             image_download_rx: None,
-            image_picker_thumbnails: HashMap::new(),
+            image_picker_thumbnails: std::collections::HashMap::new(),
             thumbnail_fetch_rx: None,
+            participant_preview_roster: None,
+            participant_preview_members: Vec::new(),
         };
         app.load_games();
         app.load_rosters();
@@ -265,7 +277,7 @@ impl TourviaApp {
         self.new_tournament_type = TournamentType::SingleElimination;
         self.new_tournament_description.clear();
         self.new_tournament_game.clear();
-        
+        self.new_tournament_logo = None;
     }
 
     pub fn open_tournament(&mut self, idx: usize) {
@@ -279,6 +291,8 @@ impl TourviaApp {
             self.show_match_modal = false;
             self.score_input = [String::new(), String::new()];
             self.bracket_zoom = 1.0;
+            self.participant_preview_roster = None;
+            self.participant_preview_members.clear();
             self.load_tournament_data(&tournament.id);
         }
     }
@@ -325,6 +339,18 @@ impl TourviaApp {
         }
     }
 
+    pub fn ensure_tournament_logos_loaded(&mut self, ctx: &egui::Context) {
+        for t in &self.tournaments {
+            if let Some(ref data) = t.logo_data {
+                if !self.tournament_logo_textures.contains_key(&t.id) {
+                    if let Some(texture) = Self::decode_logo(ctx, &t.id, data) {
+                        self.tournament_logo_textures.insert(t.id.clone(), texture);
+                    }
+                }
+            }
+        }
+    }
+
     pub fn decode_logo(ctx: &egui::Context, name: &str, data: &[u8]) -> Option<egui::TextureHandle> {
         let img = image::load_from_memory(data).ok()?;
         let rgba = img.to_rgba8();
@@ -345,6 +371,7 @@ impl TourviaApp {
             self.new_tournament_type.clone(),
             &self.new_tournament_description,
             &self.new_tournament_game,
+            self.new_tournament_logo.clone(),
         ) {
             Ok(tournament) => {
                 self.notifications.success(format!("Tournament '{}' created!", tournament.name));
@@ -354,6 +381,7 @@ impl TourviaApp {
                 self.participants.clear();
                 self.rounds.clear();
                 self.matches.clear();
+                self.new_tournament_logo = None;
                 self.refresh_tournaments();
             }
             Err(e) => {
@@ -715,6 +743,7 @@ impl eframe::App for TourviaApp {
             }
             View::TournamentDetail => {
                 self.ensure_logos_loaded(ctx);
+                self.ensure_tournament_logos_loaded(ctx);
                 let ctx_clone = ctx.clone();
 
                 // Top bar with Title & Tabs
@@ -732,6 +761,11 @@ impl eframe::App for TourviaApp {
                             ui.add_space(8.0);
                             
                             if let Some(ref t) = self.active_tournament {
+                                if let Some(texture) = self.tournament_logo_textures.get(&t.id) {
+                                    ui.add(egui::Image::new(texture).fit_to_exact_size(egui::Vec2::new(56.0, 56.0)).corner_radius(4));
+                                    ui.add_space(8.0);
+                                }
+                                
                                 ui.label(ui::theme::heading_text(&t.name));
                                 ui.add_space(8.0);
                                 
@@ -838,6 +872,9 @@ impl eframe::App for TourviaApp {
                 if self.show_match_modal {
                     ui::match_panel::render_modal(self, ctx);
                 }
+                
+                // Participant Preview Modal
+                ui::participant_panel::render_preview_modal(self, ctx);
             }
         }
         

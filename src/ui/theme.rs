@@ -1,3 +1,5 @@
+#![allow(non_snake_case, dead_code)]
+
 use egui::{Color32, FontId, RichText, Stroke, CornerRadius, Vec2, FontFamily};
 use std::sync::RwLock;
 

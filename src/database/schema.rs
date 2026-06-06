@@ -9,7 +9,8 @@ CREATE TABLE IF NOT EXISTS tournaments (
     status          TEXT NOT NULL DEFAULT 'Draft',
     created_at      TEXT NOT NULL,
     description     TEXT NOT NULL DEFAULT '',
-    game_name       TEXT NOT NULL DEFAULT ''
+    game_name       TEXT NOT NULL DEFAULT '',
+    logo_data       BLOB
 );
 ";
 
@@ -71,6 +72,7 @@ CREATE TABLE IF NOT EXISTS rosters (
     id              TEXT PRIMARY KEY,
     name            TEXT NOT NULL,
     game            TEXT NOT NULL DEFAULT '',
+    description     TEXT NOT NULL DEFAULT '',
     logo_data       BLOB
 );
 ";
@@ -94,4 +96,6 @@ pub const MIGRATIONS: &[&str] = &[
     "ALTER TABLE matches ADD COLUMN bracket_type TEXT NOT NULL DEFAULT 'Upper';",
     "ALTER TABLE matches ADD COLUMN loser_next_match_id TEXT;",
     "ALTER TABLE matches ADD COLUMN loser_next_match_slot INTEGER NOT NULL DEFAULT 0;",
+    "ALTER TABLE rosters ADD COLUMN description TEXT NOT NULL DEFAULT '';",
+    "ALTER TABLE tournaments ADD COLUMN logo_data BLOB;",
 ];

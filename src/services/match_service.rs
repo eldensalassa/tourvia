@@ -1,7 +1,22 @@
+#![allow(dead_code)]
+
 use std::sync::Arc;
 use crate::domain::match_model::MatchStatus;
-use crate::domain::repositories::{MatchRepository, ParticipantRepository, TournamentRepository};
+use crate::domain::repositories::{MatchRepository, ParticipantRepository, TournamentRepository, RoundRepository};
 use crate::domain::tournament::TournamentType;
+
+#[derive(Clone, Debug)]
+pub struct ParticipantStanding {
+    pub id: String,
+    pub name: String,
+    pub matches_played: i32,
+    pub matches_won: i32,
+    pub matches_lost: i32,
+    pub matches_drawn: i32,
+    pub games_won: i32,
+    pub games_lost: i32,
+    pub bracket_score: i32,
+}
 
 pub struct TournamentStats {
     pub total_matches: usize,
@@ -9,14 +24,14 @@ pub struct TournamentStats {
     pub pending_matches: usize,
     pub in_progress_matches: usize,
     pub bye_matches: usize,
-    /// (participant_id, participant_name, points, wins, losses, draws)
-    pub standings: Vec<(String, String, i32, i32, i32, i32)>,
+    pub standings: Vec<ParticipantStanding>,
 }
 
 pub struct MatchService {
     match_repo: Arc<dyn MatchRepository>,
     participant_repo: Arc<dyn ParticipantRepository>,
     tournament_repo: Arc<dyn TournamentRepository>,
+    round_repo: Arc<dyn RoundRepository>,
 }
 
 impl MatchService {
@@ -24,11 +39,13 @@ impl MatchService {
         match_repo: Arc<dyn MatchRepository>,
         participant_repo: Arc<dyn ParticipantRepository>,
         tournament_repo: Arc<dyn TournamentRepository>,
+        round_repo: Arc<dyn RoundRepository>,
     ) -> Self {
         Self {
             match_repo,
             participant_repo,
             tournament_repo,
+            round_repo,
         }
     }
 
@@ -123,7 +140,59 @@ impl MatchService {
     pub fn get_champion(&self, tournament_id: &str) -> Result<Option<String>, String> {
         let matches = self.match_repo.get_matches_by_tournament(tournament_id)
             .map_err(|e| format!("Database error: {}", e))?;
-        let final_match = matches.iter().find(|m| m.next_match_id.is_none());
+
+        // A champion can only exist when ALL matches are completed
+        let all_done = matches.iter().all(|m| m.status == MatchStatus::Completed || m.status == MatchStatus::Bye);
+        if !all_done {
+            return Ok(None);
+        }
+
+        let tournament = self.tournament_repo.get_tournament(tournament_id)
+            .map_err(|e| format!("Database error: {}", e))?
+            .ok_or("Tournament not found")?;
+
+        if tournament.tournament_type == TournamentType::RoundRobin {
+            // For Round Robin: champion = participant with the most wins
+            // Tiebreaker: game differential (games_won - games_lost)
+            let participants = self.participant_repo.get_participants_by_tournament(tournament_id)
+                .map_err(|e| format!("Database error: {}", e))?;
+
+            let mut best_name: Option<String> = None;
+            let mut best_wins: i32 = -1;
+            let mut best_diff: i32 = i32::MIN;
+
+            for p in &participants {
+                let mut wins = 0i32;
+                let mut gw = 0i32;
+                let mut gl = 0i32;
+
+                for m in &matches {
+                    if m.status != MatchStatus::Completed { continue; }
+                    if m.player1_id.as_ref() == Some(&p.id) {
+                        gw += m.score1;
+                        gl += m.score2;
+                        if m.winner_id.as_ref() == Some(&p.id) { wins += 1; }
+                    } else if m.player2_id.as_ref() == Some(&p.id) {
+                        gw += m.score2;
+                        gl += m.score1;
+                        if m.winner_id.as_ref() == Some(&p.id) { wins += 1; }
+                    }
+                }
+
+                let diff = gw - gl;
+                if wins > best_wins || (wins == best_wins && diff > best_diff) {
+                    best_wins = wins;
+                    best_diff = diff;
+                    best_name = Some(p.name.clone());
+                }
+            }
+
+            return Ok(best_name);
+        }
+
+        // For elimination brackets: champion = winner of the final match
+        let final_match = matches.iter().find(|m| m.next_match_id.is_none() && m.bracket_type != crate::domain::match_model::BracketType::ThirdPlace);
+
         if let Some(fm) = final_match {
             if fm.status == MatchStatus::Completed {
                 if let Some(ref winner_id) = fm.winner_id {
@@ -148,7 +217,10 @@ impl MatchService {
             .map_err(|e| format!("Database error: {}", e))?
             .ok_or("Tournament not found")?;
 
-        let is_round_robin = tournament.tournament_type == TournamentType::RoundRobin;
+        let rounds = self.round_repo.get_rounds_by_tournament(tournament_id)
+            .map_err(|e| format!("Database error: {}", e))?;
+
+        let _is_round_robin = tournament.tournament_type == TournamentType::RoundRobin;
 
         let total_matches = matches.len();
         let completed_matches = matches.iter().filter(|m| m.status == MatchStatus::Completed).count();
@@ -157,42 +229,148 @@ impl MatchService {
         let bye_matches = matches.iter().filter(|m| m.status == MatchStatus::Bye).count();
 
         // Calculate win/loss per participant
-        let mut standings: Vec<(String, String, i32, i32, i32, i32)> = participants
+        let mut standings: Vec<ParticipantStanding> = participants
             .iter()
             .map(|p| {
-                let mut wins = 0;
-                let mut losses = 0;
-                let mut draws = 0;
-                let mut points = 0;
+                let mut matches_won = 0;
+                let mut matches_lost = 0;
+                let mut matches_drawn = 0;
+                let mut games_won = 0;
+                let mut games_lost = 0;
 
                 for m in &matches {
                     if m.status == MatchStatus::Completed {
+                        let mut is_participant = false;
+                        let mut p_score = 0;
+                        let mut opp_score = 0;
+
                         if m.player1_id.as_ref() == Some(&p.id) {
-                            points += m.score1;
+                            is_participant = true;
+                            p_score = m.score1;
+                            opp_score = m.score2;
                         } else if m.player2_id.as_ref() == Some(&p.id) {
-                            points += m.score2;
+                            is_participant = true;
+                            p_score = m.score2;
+                            opp_score = m.score1;
                         }
 
-                        if m.winner_id.as_ref() == Some(&p.id) {
-                            wins += 1;
-                        } else if m.winner_id.is_some() && (m.player1_id.as_ref() == Some(&p.id) || m.player2_id.as_ref() == Some(&p.id)) {
-                            losses += 1;
-                        } else if m.winner_id.is_none() && (m.player1_id.as_ref() == Some(&p.id) || m.player2_id.as_ref() == Some(&p.id)) {
-                            draws += 1;
-                        }
-                    } else if m.status == MatchStatus::Bye {
-                        if m.player1_id.as_ref() == Some(&p.id) || m.player2_id.as_ref() == Some(&p.id) {
-                            // Byes do not grant wins or points in the standings table for elimination brackets
+                        if is_participant {
+                            games_won += p_score;
+                            games_lost += opp_score;
+
+                            if m.winner_id.as_ref() == Some(&p.id) {
+                                matches_won += 1;
+                            } else if m.winner_id.is_some() {
+                                matches_lost += 1;
+                            } else {
+                                matches_drawn += 1;
+                            }
                         }
                     }
                 }
 
-                (p.id.clone(), p.name.clone(), points, wins, losses, draws)
+                let mut bracket_score = 0;
+                let mut is_eliminated = false;
+                let mut elimination_score = 0;
+
+                if tournament.tournament_type != TournamentType::RoundRobin {
+                    for m in &matches {
+                        if m.player1_id.as_ref() == Some(&p.id) || m.player2_id.as_ref() == Some(&p.id) {
+                            let is_winner = m.winner_id.as_ref() == Some(&p.id);
+                            let is_loser = m.winner_id.is_some() && !is_winner;
+                            
+                            if m.bracket_type == crate::domain::match_model::BracketType::GrandFinal {
+                                let score = if is_winner { 100000 } else { 90000 };
+                                if score > bracket_score { bracket_score = score; }
+                                if is_loser { 
+                                    is_eliminated = true;
+                                    elimination_score = 90000;
+                                }
+                            } else if m.bracket_type == crate::domain::match_model::BracketType::ThirdPlace {
+                                let score = if is_winner { 80000 } else { 70000 };
+                                if score > bracket_score { bracket_score = score; }
+                                if is_loser {
+                                    is_eliminated = true;
+                                    elimination_score = 70000;
+                                }
+                            } else {
+                                let round_num = rounds.iter().find(|r| r.id == m.round_id).map(|r| r.round_number).unwrap_or(0);
+                                if tournament.tournament_type == TournamentType::SingleElimination {
+                                    let score = round_num * 1000 + if is_winner { 500 } else { 0 };
+                                    if score > bracket_score { bracket_score = score; }
+                                    if is_loser {
+                                        is_eliminated = true;
+                                        elimination_score = round_num * 1000;
+                                    }
+                                } else if tournament.tournament_type == TournamentType::DoubleElimination {
+                                    if m.bracket_type == crate::domain::match_model::BracketType::Lower {
+                                        let score = 20000 + round_num * 1000 + if is_winner { 500 } else { 0 };
+                                        if score > bracket_score { bracket_score = score; }
+                                        if is_loser {
+                                            is_eliminated = true;
+                                            elimination_score = 20000 + round_num * 1000;
+                                        }
+                                    } else if m.bracket_type == crate::domain::match_model::BracketType::Upper {
+                                        let score = 50000 + round_num * 1000 + if is_winner { 500 } else { 0 };
+                                        if score > bracket_score { bracket_score = score; }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                let final_bracket_score = if is_eliminated {
+                    elimination_score
+                } else {
+                    bracket_score
+                };
+
+                let matches_played = matches_won + matches_lost + matches_drawn;
+
+                ParticipantStanding {
+                    id: p.id.clone(),
+                    name: p.name.clone(),
+                    matches_played,
+                    matches_won,
+                    matches_lost,
+                    matches_drawn,
+                    games_won,
+                    games_lost,
+                    bracket_score: final_bracket_score,
+                }
             })
             .collect();
 
-        // Sort by points descending, then wins, then fewest losses
-        standings.sort_by(|a, b| b.2.cmp(&a.2).then(b.3.cmp(&a.3)).then(a.4.cmp(&b.4)));
+        // 1. Bracket Score (for SE/DE)
+        // 2. Pts/GW (games_won)
+        // 3. GD (games_won - games_lost)
+        // 4. MW (matches_won)
+        // 5. Head-to-Head
+        standings.sort_by(|a, b| {
+            b.bracket_score.cmp(&a.bracket_score)
+             .then(b.games_won.cmp(&a.games_won))
+             .then((b.games_won - b.games_lost).cmp(&(a.games_won - a.games_lost)))
+             .then(b.matches_won.cmp(&a.matches_won))
+             .then_with(|| {
+                 let mut a_wins_h2h = 0;
+                 let mut b_wins_h2h = 0;
+                 for m in &matches {
+                     if m.status == MatchStatus::Completed {
+                         let is_h2h = (m.player1_id.as_ref() == Some(&a.id) && m.player2_id.as_ref() == Some(&b.id)) ||
+                                      (m.player1_id.as_ref() == Some(&b.id) && m.player2_id.as_ref() == Some(&a.id));
+                         if is_h2h {
+                             if m.winner_id.as_ref() == Some(&a.id) {
+                                 a_wins_h2h += 1;
+                             } else if m.winner_id.as_ref() == Some(&b.id) {
+                                 b_wins_h2h += 1;
+                             }
+                         }
+                     }
+                 }
+                 b_wins_h2h.cmp(&a_wins_h2h)
+             })
+        });
 
         Ok(TournamentStats {
             total_matches,

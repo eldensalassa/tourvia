@@ -69,28 +69,38 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
                 .striped(true)
                 .resizable(false)
                 .cell_layout(egui::Layout::left_to_right(egui::Align::Center))
-                .column(Column::exact(40.0))          // Rank
-                .column(Column::remainder().at_least(150.0)) // Participant
-                .column(Column::exact(60.0))          // Pts
-                .column(Column::exact(40.0))          // W
-                .column(Column::exact(40.0))          // D
-                .column(Column::exact(40.0))          // L
-                .column(Column::exact(60.0))          // Win %
+                .column(Column::exact(40.0))                 // Rank
+                .column(Column::remainder().at_least(100.0)) // Team
+                .column(Column::exact(45.0))                 // MP
+                .column(Column::exact(60.0))                 // Pts/GW
+                .column(Column::exact(45.0))                 // GD
+                .column(Column::exact(45.0))                 // MW
+                .column(Column::exact(45.0))                 // ML
+                .column(Column::exact(55.0))                 // M WR
+                .column(Column::exact(45.0))                 // GL
+                .column(Column::exact(55.0))                 // G WR
+                .column(Column::exact(16.0))                 // Spacer for right edge padding
                 .min_scrolled_height(0.0);
 
             table.header(30.0, |mut header| {
                 header.col(|ui| { ui.label(theme::label_text("Rank")); });
-                header.col(|ui| { ui.label(theme::label_text("Participant")); });
-                header.col(|ui| { ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| { ui.label(theme::label_text("Pts")); }); });
-                header.col(|ui| { ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| { ui.label(theme::label_text("W")); }); });
-                header.col(|ui| { ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| { ui.label(theme::label_text("D")); }); });
-                header.col(|ui| { ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| { ui.label(theme::label_text("L")); }); });
-                header.col(|ui| { ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| { ui.label(theme::label_text("Win %")); }); });
+                header.col(|ui| { ui.label(theme::label_text("Team")); });
+                header.col(|ui| { ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| { ui.label(theme::label_text("MP")); }); });
+                header.col(|ui| { ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| { ui.label(theme::label_text("Pts/GW")); }); });
+                header.col(|ui| { ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| { ui.label(theme::label_text("GD")); }); });
+                header.col(|ui| { ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| { ui.label(theme::label_text("MW")); }); });
+                header.col(|ui| { ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| { ui.label(theme::label_text("ML")); }); });
+                header.col(|ui| { ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| { ui.label(theme::label_text("M WR")); }); });
+                header.col(|ui| { ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| { ui.label(theme::label_text("GL")); }); });
+                header.col(|ui| { ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| { ui.label(theme::label_text("G WR")); }); });
+                header.col(|_ui| { /* spacer */ });
             })
             .body(|mut body| {
-                for (idx, (id, name, points, wins, losses, draws)) in stats.standings.iter().enumerate() {
-                    let total_games = wins + losses + draws;
-                    let win_rate = if total_games > 0 { (*wins as f32 / total_games as f32) * 100.0 } else { 0.0 };
+                for (idx, standing) in stats.standings.iter().enumerate() {
+                    let match_win_rate = if standing.matches_played > 0 { (standing.matches_won as f32 / standing.matches_played as f32) * 100.0 } else { 0.0 };
+                    let total_games = standing.games_won + standing.games_lost;
+                    let game_win_rate = if total_games > 0 { (standing.games_won as f32 / total_games as f32) * 100.0 } else { 0.0 };
+                    let game_diff = standing.games_won - standing.games_lost;
 
                     body.row(36.0, |mut row| {
                         row.col(|ui| {
@@ -105,44 +115,76 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
 
                         row.col(|ui| {
                             ui.horizontal(|ui| {
-                                if let Some(texture) = app.logo_textures.get(id) {
+                                if let Some(texture) = app.logo_textures.get(&standing.id) {
                                     ui.add(egui::Image::new(texture).fit_to_exact_size(Vec2::new(18.0, 18.0)).corner_radius(2.0));
                                     ui.add_space(4.0);
                                 }
-                                ui.label(egui::RichText::new(name).size(14.0).color(theme::TEXT_PRIMARY()));
+                                ui.label(egui::RichText::new(&standing.name).size(14.0).color(theme::TEXT_PRIMARY()));
                             });
                         });
 
+                        // MP
                         row.col(|ui| {
                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                ui.label(egui::RichText::new(&points.to_string()).size(14.0).color(theme::TEXT_PRIMARY()).strong());
+                                ui.label(egui::RichText::new(&standing.matches_played.to_string()).size(14.0).color(theme::TEXT_PRIMARY()));
                             });
                         });
 
+                        // Pts/GW
                         row.col(|ui| {
                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                ui.label(egui::RichText::new(&wins.to_string()).size(14.0).color(theme::SUCCESS()));
+                                ui.label(egui::RichText::new(&standing.games_won.to_string()).size(14.0).color(theme::SUCCESS()));
                             });
                         });
 
+                        // GD
                         row.col(|ui| {
                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                ui.label(egui::RichText::new(&draws.to_string()).size(14.0).color(theme::TEXT_MUTED()));
+                                let gd_str = if game_diff > 0 { format!("+{}", game_diff) } else { game_diff.to_string() };
+                                let color = if game_diff > 0 { theme::SUCCESS() } else if game_diff < 0 { theme::ERROR() } else { theme::TEXT_MUTED() };
+                                ui.label(egui::RichText::new(gd_str).size(14.0).color(color));
                             });
                         });
 
+                        // MW
                         row.col(|ui| {
                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                ui.label(egui::RichText::new(&losses.to_string()).size(14.0).color(theme::ERROR()));
+                                ui.label(egui::RichText::new(&standing.matches_won.to_string()).size(14.0).color(theme::SUCCESS()));
                             });
                         });
 
+                        // ML
                         row.col(|ui| {
                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                let wr_str = if total_games > 0 { format!("{:.0}%", win_rate) } else { "-".to_string() };
+                                ui.label(egui::RichText::new(&standing.matches_lost.to_string()).size(14.0).color(theme::ERROR()));
+                            });
+                        });
+
+                        // M WR
+                        row.col(|ui| {
+                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                let wr_str = if standing.matches_played > 0 { format!("{:.0}%", match_win_rate) } else { "-".to_string() };
                                 ui.label(egui::RichText::new(wr_str).size(13.0).color(theme::TEXT_SECONDARY()));
                             });
                         });
+
+                        // GL
+                        row.col(|ui| {
+                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                ui.label(egui::RichText::new(&standing.games_lost.to_string()).size(14.0).color(theme::ERROR()));
+                            });
+                        });
+
+                        // G WR
+                        row.col(|ui| {
+                            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                let wr_str = if total_games > 0 { format!("{:.0}%", game_win_rate) } else { "-".to_string() };
+                                ui.label(egui::RichText::new(wr_str).size(13.0).color(theme::TEXT_SECONDARY()));
+                            });
+                        });
+
+                        // Spacer
+                        row.col(|_ui| { /* space */ });
                     });
                 }
             });

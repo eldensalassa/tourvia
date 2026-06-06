@@ -66,10 +66,12 @@ pub struct Tournament {
     pub created_at: String,
     pub description: String,
     pub game_name: String,
+    #[serde(skip)]
+    pub logo_data: Option<Vec<u8>>,
 }
 
 impl Tournament {
-    pub fn new(name: String, tournament_type: TournamentType, description: String, game_name: String) -> Self {
+    pub fn new(name: String, tournament_type: TournamentType, description: String, game_name: String, logo_data: Option<Vec<u8>>) -> Self {
         Self {
             id: uuid::Uuid::new_v4().to_string(),
             name,
@@ -79,6 +81,7 @@ impl Tournament {
             created_at: chrono::Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
             description,
             game_name,
+            logo_data,
         }
     }
 }

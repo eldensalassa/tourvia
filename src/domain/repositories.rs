@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use super::match_model::Match;
 use super::participant::Participant;
 use super::round::Round;

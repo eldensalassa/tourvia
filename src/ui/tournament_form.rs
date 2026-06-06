@@ -75,6 +75,26 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
 
                 ui.add_space(18.0);
 
+                // ─── Tournament Logo ────────────────
+                ui.label(theme::section_header("TOURNAMENT LOGO (OPTIONAL)"));
+                ui.add_space(4.0);
+                
+                ui.horizontal(|ui| {
+                    if app.new_tournament_logo.is_some() {
+                        ui.label(RichText::new("✅ Image selected").color(theme::SUCCESS()));
+                        if ui.add(egui::Button::new(RichText::new("🗑").color(theme::ERROR())).fill(Color32::TRANSPARENT)).clicked() {
+                            app.new_tournament_logo = None;
+                        }
+                    } else {
+                        if ui.add(egui::Button::new("Browse Image").fill(theme::BG_ELEVATED())).clicked() {
+                            app.image_picker_open = true;
+                            app.image_picker_target = Some(crate::app::ImageTarget::NewTournamentLogo);
+                        }
+                    }
+                });
+
+                ui.add_space(18.0);
+
                 // ─── Description ────────────────────
                 ui.label(theme::section_header("DESCRIPTION (OPTIONAL)"));
                 ui.add_space(4.0);

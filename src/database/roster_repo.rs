@@ -7,8 +7,8 @@ impl RosterRepository for Database {
     fn create_roster(&self, roster: &Roster) -> Result<(), String> {
         let conn = self.conn.lock().unwrap();
         conn.execute(
-            "INSERT INTO rosters (id, name, game, logo_data) VALUES (?1, ?2, ?3, ?4)",
-            params![roster.id, roster.name, roster.game, roster.logo_data],
+            "INSERT INTO rosters (id, name, game, description, logo_data) VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![roster.id, roster.name, roster.game, roster.description, roster.logo_data],
         )
         .map_err(|e| e.to_string())?;
         Ok(())
@@ -17,7 +17,7 @@ impl RosterRepository for Database {
     fn get_rosters(&self) -> Result<Vec<Roster>, String> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn
-            .prepare("SELECT id, name, game, logo_data FROM rosters ORDER BY name ASC")
+            .prepare("SELECT id, name, game, description, logo_data FROM rosters ORDER BY name ASC")
             .map_err(|e| e.to_string())?;
 
         let roster_iter = stmt
@@ -26,7 +26,8 @@ impl RosterRepository for Database {
                     id: row.get(0)?,
                     name: row.get(1)?,
                     game: row.get(2)?,
-                    logo_data: row.get(3)?,
+                    description: row.get(3)?,
+                    logo_data: row.get(4)?,
                 })
             })
             .map_err(|e| e.to_string())?;
@@ -48,8 +49,8 @@ impl RosterRepository for Database {
     fn update_roster(&self, roster: &Roster) -> Result<(), String> {
         let conn = self.conn.lock().unwrap();
         conn.execute(
-            "UPDATE rosters SET name = ?1, game = ?2, logo_data = ?3 WHERE id = ?4",
-            params![roster.name, roster.game, roster.logo_data, roster.id],
+            "UPDATE rosters SET name = ?1, game = ?2, description = ?3, logo_data = ?4 WHERE id = ?5",
+            params![roster.name, roster.game, roster.description, roster.logo_data, roster.id],
         )
         .map_err(|e| e.to_string())?;
         Ok(())

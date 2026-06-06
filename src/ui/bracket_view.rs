@@ -18,7 +18,18 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
             if ui.add(egui::Button::new(RichText::new("🖼 Export PNG").size(12.0).color(theme::TEXT_PRIMARY())).fill(theme::BG_CARD())).clicked() {
                 if let Some(t) = &app.active_tournament {
                     if let Some(path) = rfd::FileDialog::new().add_filter("png", &["png"]).save_file() {
-                        if let Err(e) = crate::utils::image_exporter::export_bracket(t, &app.rounds, &app.matches, path.to_str().unwrap()) {
+                        // Collect participant logo raw bytes from DB
+                        let mut participant_logos = std::collections::HashMap::new();
+                        for p in &app.participants {
+                            if p.has_logo {
+                                use crate::domain::repositories::ParticipantRepository;
+                                if let Ok(Some(data)) = app.db.get_participant_logo(&p.id) {
+                                    participant_logos.insert(p.id.clone(), data);
+                                }
+                            }
+                        }
+                        let tournament_logo = t.logo_data.as_deref();
+                        if let Err(e) = crate::utils::image_exporter::export_bracket(t, &app.rounds, &app.matches, path.to_str().unwrap(), app.champion_name.as_deref(), &participant_logos, tournament_logo) {
                             app.notifications.error(format!("Export failed: {}", e));
                         } else {
                             app.notifications.success("Bracket exported to PNG!");

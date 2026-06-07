@@ -11,13 +11,13 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
     // Header with back button
     ui.horizontal(|ui| {
         if ui.add(
-            egui::Button::new(RichText::new("← Back").color(theme::TEXT_SECONDARY()).size(14.0))
+            egui::Button::new(RichText::new("⬅ Back").color(theme::TEXT_SECONDARY()).size(14.0))
                 .fill(Color32::TRANSPARENT),
         ).clicked() {
             app.go_to_dashboard();
         }
         ui.add_space(8.0);
-        ui.label(theme::heading_text("📝 Create New Tournament"));
+        ui.label(theme::heading_text("Create New Tournament"));
     });
 
     ui.add_space(8.0);

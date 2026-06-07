@@ -16,12 +16,14 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
         .show(ui, |ui| {
             ui.horizontal(|ui| {
                 ui.vertical(|ui| {
-                    ui.horizontal(|ui| {
+                    ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
                         // Add application logo next to the title
-                        ui.add(egui::Image::new(egui::include_image!("../assets/logo.png")).max_height(36.0));
+                        ui.add(egui::Image::new(egui::include_image!("../assets/logo.png")).fit_to_exact_size(egui::Vec2::new(75.0, 75.0)));
+                        
+                        ui.add_space(5.0);
                         
                         ui.label(
-                            theme::heading_text("TOURVIA").size(36.0)
+                            theme::heading_text("TOURVIA").size(48.0).color(theme::ACCENT_BRONZE())
                         );
                     });
                     ui.add_space(4.0);
@@ -31,32 +33,7 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
                 });
 
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    // Theme toggle
-                    let current_mode = theme::get_theme().mode;
-                    let icon = if current_mode == theme::ThemeMode::Dark {
-                        "✨ Light"
-                    } else {
-                        "🌙 Dark"
-                    };
-                    if ui
-                        .add(
-                            egui::Button::new(RichText::new(icon).color(theme::TEXT_PRIMARY()))
-                                .fill(theme::BG_ELEVATED())
-                                .corner_radius(theme::button_rounding())
-                                .min_size(Vec2::new(80.0, 36.0)),
-                        )
-                        .clicked()
-                    {
-                        let new_theme = if current_mode == theme::ThemeMode::Dark {
-                            theme::ThemeConfig::light()
-                        } else {
-                            theme::ThemeConfig::dark()
-                        };
-                        theme::set_theme(new_theme);
-                        app.theme_applied = false;
-                    }
-
-                    ui.add_space(8.0);
+                    // Removed theme toggle button
 
                     let import_btn = egui::Button::new(
                         RichText::new("📂 Import")

@@ -15,7 +15,7 @@ Tourvia is a *Native Desktop* application developed using the **Rust** programmi
 
 ## 🚀 Key Features
 
-- **🏆 Smart Bracket System**: Fully supports **Double Elimination** (with Upper/Lower Brackets) and **Round Robin** formats. Automatically routes match winners, losers, and calculates *BYE* scenarios.
+- **🏆 Smart Bracket System**: Fully supports **Single Elimination**. **Double Elimination** (with Upper/Lower Brackets) and **Round Robin** formats. Automatically routes match winners, losers, and calculates *BYE* scenarios.
 - **👥 Global Roster & Team Management**: Register teams once in the *Global Roster* system and reuse them across multiple tournaments. Full support for uploading high-resolution team logos (PNG/JPG).
 - **📊 Real-time Standings & Statistics**: Automatically calculates standings for the *Round Robin* format (Wins, Losses, Game Differentials). Interactive dashboard displays win ratios and total matches.
 - **📸 High-Quality Bracket Export**: Share your tournament results! Export your giant tournament brackets into high-resolution PNG image formats with just a single click.
@@ -52,7 +52,7 @@ cargo run
 - Visit the **Global Roster** tab to register team names and upload team logos before the tournament starts. Teams in this roster are globally accessible across all tournaments.
 
 ### 2. Starting a New Tournament
-- Click the **New Tournament** button, provide a Name, the Game being played, and select the format (Double Elimination or Round Robin).
+- Click the **New Tournament** button, provide a Name, the Game being played, and select the format (Single Elimination, Double Elimination or Round Robin).
 - Open the tournament, then navigate to the **Participants** tab. Click "Add Participant" to import teams from the *Global Roster* into your tournament.
 - Click **"Generate Bracket"** to randomize and create the bracket.
 
@@ -84,5 +84,5 @@ This application uses a simplified *Domain-Driven* architectural pattern:
 
 ---
 <div align="center">
-  <i>Created by the Tourvia Team - Desktop Final Project - 2026</i>
+  <i>Created by the Tourvia Team</i>
 </div>

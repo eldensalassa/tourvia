@@ -180,23 +180,11 @@ fn render_round_robin_view(app: &mut TourviaApp, ui: &mut Ui) {
                                 let card_width = 240.0;
                                 let card_height = 96.0;
 
-                                let (rect, response) = ui.allocate_exact_size(Vec2::new(card_width, card_height), Sense::click());
-
-                                let is_hovered = response.hovered();
-                                let bg = if is_selected { theme::BG_ELEVATED() } else if is_hovered { theme::BG_CARD_HOVER() } else { theme::BG_CARD() };
-                                let border_color = if is_selected { theme::ACCENT_BRONZE() } else { theme::BORDER_SUBTLE() };
-                                let stroke_w = if is_selected { 2.0 } else { 1.0 };
-                                let radius = 8.0;
-
-                                // Shadow
-                                let shadow_y = if is_hovered || is_selected { 3.0 } else { 1.5 };
-                                ui.painter().rect_filled(rect.translate(Vec2::new(0.0, shadow_y)), radius, egui::Color32::from_black_alpha(40));
-
-                                // Card bg + border
-                                ui.painter().rect_filled(rect, radius, bg);
-                                ui.painter().rect_stroke(rect, radius, Stroke::new(stroke_w, border_color), StrokeKind::Inside);
-
-                                let painter = ui.painter_at(rect);
+                                use crate::ui::components::card::Card;
+                                
+                                let card_response = Card::new(Vec2::new(card_width, card_height), |ui| {
+                                    let rect = ui.max_rect();
+                                    let painter = ui.painter();
 
                                 // === Absolute positions ===
                                 let col1_cx = rect.left() + card_width * 0.22;
@@ -279,9 +267,9 @@ fn render_round_robin_view(app: &mut TourviaApp, ui: &mut Ui) {
 
                                 // --- Center: Status badge ---
                                 let (badge_bg, badge_fg) = match m.status {
-                                    MatchStatus::Completed => (theme::SUCCESS().linear_multiply(0.2), theme::SUCCESS()),
-                                    MatchStatus::InProgress => (theme::ACCENT_BRONZE().linear_multiply(0.2), theme::ACCENT_BRONZE()),
-                                    MatchStatus::Bye => (theme::WARNING().linear_multiply(0.2), theme::WARNING()),
+                                    MatchStatus::Completed => (theme::SUCCESS().linear_multiply(0.15), theme::SUCCESS()),
+                                    MatchStatus::InProgress => (theme::WARNING().linear_multiply(0.15), theme::WARNING()),
+                                    MatchStatus::Bye => (theme::TEXT_MUTED().linear_multiply(0.15), theme::TEXT_MUTED()),
                                     MatchStatus::Pending => (theme::BG_PANEL(), theme::TEXT_MUTED()),
                                 };
                                 let badge_label = match m.status {
@@ -294,7 +282,7 @@ fn render_round_robin_view(app: &mut TourviaApp, ui: &mut Ui) {
                                 let bw = badge_galley.size().x + 16.0;
                                 let bh = badge_galley.size().y + 8.0;
                                 let badge_rect = Rect::from_min_size(Pos2::new(center_cx - bw / 2.0, badge_top_y), Vec2::new(bw, bh));
-                                painter.rect_filled(badge_rect, 4.0, badge_bg);
+                                painter.rect_filled(badge_rect, theme::badge_rounding(), badge_bg);
                                 painter.galley(
                                     Pos2::new(center_cx - badge_galley.size().x / 2.0, badge_top_y + 4.0),
                                     badge_galley,
@@ -319,8 +307,14 @@ fn render_round_robin_view(app: &mut TourviaApp, ui: &mut Ui) {
                                 let p2_trunc: String = if p2.chars().count() > 12 { format!("{}…", p2.chars().take(11).collect::<String>()) } else { p2.to_string() };
                                 painter.text(Pos2::new(col2_cx, name_y), Align2::CENTER_TOP, &p2_trunc, FontId::new(10.0, FontFamily::Proportional), p2_color);
 
+                                })
+                                .inner_margin(0.0)
+                                .is_selected(is_selected)
+                                .accessibility_label(format!("Match between {} and {}", m.player1_name, m.player2_name))
+                                .show(ui);
+
                                 // Click handler
-                                if response.clicked() {
+                                if card_response.clicked() {
                                     clicked_match_id = Some(m.id.clone());
                                 }
                             }
@@ -419,13 +413,21 @@ fn render_elimination_bracket(app: &mut TourviaApp, ui: &mut Ui) {
                         let card_rect = Rect::from_min_size(Pos2::new(round_x, match_y), Vec2::new(card_w, card_h));
 
                         let is_selected = Some(&m.id) == app.selected_match.as_ref();
-                        let radius = 8.0 * zoom;
+                        let is_hovered = response.hover_pos().map_or(false, |pos| card_rect.contains(pos));
+                        let is_active = is_selected || is_hovered;
                         
-                        // Draw shadow manually by drawing slightly offset darker rects
-                        painter.rect_filled(card_rect.translate(Vec2::new(0.0, 2.0 * zoom)), radius, egui::Color32::from_black_alpha(40));
+                        let radius = 8.0 * zoom;
+                        let bg = if is_active { theme::BG_CARD_HOVER() } else { theme::BG_CARD() };
+                        let border_color = if is_active { theme::BORDER_FOCUS() } else { theme::BORDER_SUBTLE() };
+                        let stroke_w = if is_active { 1.5 * zoom } else { 1.0 * zoom };
+                        
+                        // Shadow
+                        let shadow_offset = if is_active { 6.0 * zoom } else { 3.0 * zoom };
+                        let shadow_color = egui::Color32::from_black_alpha(if theme::get_theme().mode == theme::ThemeMode::Dark { 160 } else { 30 });
+                        painter.rect_filled(card_rect.translate(Vec2::new(0.0, shadow_offset)), radius, shadow_color);
 
-                        painter.rect_filled(card_rect, radius, if is_selected { theme::BG_ELEVATED() } else { theme::BG_CARD() });
-                        painter.rect_stroke(card_rect, radius, Stroke::new(if is_selected { 2.0 } else { 1.0 }, if is_selected { theme::ACCENT_BRONZE() } else { theme::BORDER_SUBTLE() }), StrokeKind::Inside);
+                        painter.rect_filled(card_rect, radius, bg);
+                        painter.rect_stroke(card_rect, radius, Stroke::new(stroke_w, border_color), StrokeKind::Inside);
 
                         let div_y = card_rect.min.y + half_h;
                         painter.line_segment([Pos2::new(card_rect.min.x, div_y), Pos2::new(card_rect.max.x, div_y)], Stroke::new(1.0, theme::BORDER_SUBTLE()));
@@ -434,7 +436,7 @@ fn render_elimination_bracket(app: &mut TourviaApp, ui: &mut Ui) {
 
                         let p1_name = if m.player1_name.is_empty() { "TBD" } else { &m.player1_name };
                         let p1_win = m.winner_id.is_some() && m.player1_id == m.winner_id;
-                        let p1_color = if p1_win { theme::ACCENT_BRONZE() } else if m.player1_name == "BYE" { theme::TEXT_MUTED() } else { theme::TEXT_SECONDARY() };
+                        let p1_color = if p1_win { theme::TEXT_PRIMARY() } else if m.player1_name == "BYE" { theme::TEXT_MUTED() } else { theme::TEXT_SECONDARY() };
                         
                         let logo_size = 14.0 * zoom;
                         let mut p1_text_x = card_rect.min.x + 8.0 * zoom;
@@ -462,7 +464,7 @@ fn render_elimination_bracket(app: &mut TourviaApp, ui: &mut Ui) {
                         // P2
                         let p2_name = if m.player2_name.is_empty() { "TBD" } else { &m.player2_name };
                         let p2_win = m.winner_id.is_some() && m.player2_id == m.winner_id;
-                        let p2_color = if p2_win { theme::ACCENT_BRONZE() } else if m.player2_name == "BYE" { theme::TEXT_MUTED() } else { theme::TEXT_SECONDARY() };
+                        let p2_color = if p2_win { theme::TEXT_PRIMARY() } else if m.player2_name == "BYE" { theme::TEXT_MUTED() } else { theme::TEXT_SECONDARY() };
                         
                         let mut p2_text_x = card_rect.min.x + 8.0 * zoom;
                         if let Some(id) = &m.player2_id {

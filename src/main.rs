@@ -63,6 +63,16 @@ fn main() -> eframe::Result<()> {
         Box::new(|cc| {
             // Install image loaders for egui to load textures
             egui_extras::install_image_loaders(&cc.egui_ctx);
+            
+            // Load custom gaming font if available
+            let mut fonts = egui::FontDefinitions::default();
+            if let Ok(font_data) = std::fs::read("C:\\Windows\\Fonts\\impact.ttf") {
+                fonts.font_data.insert("Impact".to_owned(), std::sync::Arc::new(egui::FontData::from_owned(font_data)));
+                fonts.families.get_mut(&egui::FontFamily::Proportional).unwrap().insert(0, "Impact".to_owned());
+                fonts.families.insert(egui::FontFamily::Name("Impact".into()), vec!["Impact".to_owned()]);
+            }
+            cc.egui_ctx.set_fonts(fonts);
+            
             let mut app = TourviaApp::new(db);
             app.refresh_tournaments();
             app.load_rosters();

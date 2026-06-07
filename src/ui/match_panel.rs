@@ -171,31 +171,84 @@ pub fn render_modal(app: &mut TourviaApp, ctx: &egui::Context) {
                             ui.add_space(16.0);
 
                             // === Score Entry (for in-progress matches) ===
-                            if m.status == MatchStatus::InProgress {
+                            if m.status == MatchStatus::Pending {
                                 ui.separator();
                                 ui.add_space(12.0);
-                                ui.label(RichText::new("Report Score").size(14.0).color(theme::TEXT_PRIMARY()).strong());
-                                ui.add_space(8.0);
+                                if ui.add(egui::Button::new(RichText::new("▶ Start Match").size(14.0).color(theme::BG_DARK()).strong())
+                                    .fill(theme::SUCCESS()).corner_radius(theme::button_rounding())
+                                    .min_size(Vec2::new(ui.available_width(), 40.0))).clicked() {
+                                    app.start_match();
+                                }
+                            } else if m.status == MatchStatus::InProgress {
+                                ui.separator();
+                                ui.add_space(12.0);
+                                
+                                ui.horizontal(|ui| {
+                                    ui.label(RichText::new("Live Match Controls").size(16.0).color(theme::TEXT_PRIMARY()).strong());
+                                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                        let status_text = if app.show_broadcast_window { "Overlay: ON" } else { "Overlay: OFF" };
+                                        let bg_color = if app.show_broadcast_window { theme::SUCCESS() } else { theme::TEXT_MUTED() };
+                                        let toggle_btn = egui::Button::new(RichText::new(status_text).color(theme::BG_DARK()).strong())
+                                            .fill(bg_color)
+                                            .corner_radius(theme::badge_rounding());
+                                        if ui.add(toggle_btn).clicked() {
+                                            app.show_broadcast_window = !app.show_broadcast_window;
+                                        }
+                                    });
+                                });
+                                ui.add_space(12.0);
 
+                                // Timer Controls
+                                ui.horizontal(|ui| {
+                                    ui.label(RichText::new("Timer:").size(14.0).color(theme::TEXT_SECONDARY()));
+                                    let mins = app.broadcast_timer_seconds / 60;
+                                    let secs = app.broadcast_timer_seconds % 60;
+                                    ui.label(RichText::new(format!("{:02}:{:02}", mins, secs)).size(16.0).color(theme::ACCENT_BRONZE()).strong());
+                                    
+                                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                        if ui.button("Reset").clicked() {
+                                            app.broadcast_timer_seconds = 0;
+                                            app.broadcast_timer_running = false;
+                                        }
+                                        let play_text = if app.broadcast_timer_running { "Pause" } else { "Start" };
+                                        if ui.button(play_text).clicked() {
+                                            app.broadcast_timer_running = !app.broadcast_timer_running;
+                                            if app.broadcast_timer_running {
+                                                app.broadcast_timer_last_tick = None;
+                                            }
+                                        }
+                                    });
+                                });
+                                ui.add_space(12.0);
+
+                                // Live Score Controls
                                 ui.columns(2, |cols| {
                                     cols[0].vertical_centered(|ui| {
-                                        ui.label(RichText::new(p1).size(12.0).color(theme::TEXT_SECONDARY()));
-                                        ui.add_space(4.0);
-                                        ui.add(egui::TextEdit::singleline(&mut app.score_input[0]).desired_width(100.0).hint_text("Score").horizontal_align(egui::Align::Center));
+                                        ui.label(RichText::new(p1).size(14.0).color(theme::TEXT_SECONDARY()));
+                                        ui.add_space(8.0);
+                                        ui.horizontal(|ui| {
+                                            if ui.button(RichText::new("-").size(18.0)).clicked() { app.update_live_score(-1, 0); }
+                                            ui.label(RichText::new(m.score1.to_string()).size(24.0).color(theme::TEXT_PRIMARY()).strong());
+                                            if ui.button(RichText::new("+").size(18.0)).clicked() { app.update_live_score(1, 0); }
+                                        });
                                     });
                                     cols[1].vertical_centered(|ui| {
-                                        ui.label(RichText::new(p2).size(12.0).color(theme::TEXT_SECONDARY()));
-                                        ui.add_space(4.0);
-                                        ui.add(egui::TextEdit::singleline(&mut app.score_input[1]).desired_width(100.0).hint_text("Score").horizontal_align(egui::Align::Center));
+                                        ui.label(RichText::new(p2).size(14.0).color(theme::TEXT_SECONDARY()));
+                                        ui.add_space(8.0);
+                                        ui.horizontal(|ui| {
+                                            if ui.button(RichText::new("-").size(18.0)).clicked() { app.update_live_score(0, -1); }
+                                            ui.label(RichText::new(m.score2.to_string()).size(24.0).color(theme::TEXT_PRIMARY()).strong());
+                                            if ui.button(RichText::new("+").size(18.0)).clicked() { app.update_live_score(0, 1); }
+                                        });
                                     });
                                 });
 
-                                ui.add_space(12.0);
+                                ui.add_space(16.0);
 
-                                if ui.add(egui::Button::new(RichText::new("Submit Match Result").size(13.0).color(theme::BG_DARK()).strong())
-                                    .fill(theme::ACCENT_BRONZE()).corner_radius(theme::button_rounding())
-                                    .min_size(Vec2::new(ui.available_width(), 36.0))).clicked() {
-                                    app.submit_match_score();
+                                if ui.add(egui::Button::new(RichText::new("⏹ End Match & Save Score").size(14.0).color(theme::BG_DARK()).strong())
+                                    .fill(theme::WARNING()).corner_radius(theme::button_rounding())
+                                    .min_size(Vec2::new(ui.available_width(), 40.0))).clicked() {
+                                    app.end_match();
                                 }
                             }
                         }

@@ -11,7 +11,7 @@ use app::TourviaApp;
 use database::Database;
 
 fn load_icon() -> Option<egui::IconData> {
-    if let Ok(image) = image::load_from_memory(include_bytes!("assets/icon.ico")) {
+    if let Ok(image) = image::load_from_memory(include_bytes!("assets/logo.png")) {
         let image = image.into_rgba8();
         let (width, height) = image.dimensions();
         let rgba = image.into_raw();

@@ -19,7 +19,7 @@ fn render_list(app: &mut TourviaApp, ui: &mut egui::Ui) {
         .max_width(320.0)
         .show_inside(ui, |ui| {
             // Manage Games section
-            ui.label(theme::heading_text("🎮 Manage Games"));
+            ui.label(theme::heading_text("Manage Games"));
             ui.add_space(16.0);
             
             ui.label(RichText::new("Game Name").color(theme::TEXT_MUTED()).size(13.0));
@@ -80,7 +80,7 @@ fn render_list(app: &mut TourviaApp, ui: &mut egui::Ui) {
             ui.add_space(32.0);
             
             // Manage Teams section
-            ui.label(theme::heading_text("⚔ Add Team / Player"));
+            ui.label(theme::heading_text("Add Team / Player"));
             ui.add_space(16.0);
             
             if app.global_games.is_empty() {
@@ -190,7 +190,7 @@ fn render_list(app: &mut TourviaApp, ui: &mut egui::Ui) {
         .frame(egui::Frame::new().fill(theme::BG_DARK()).inner_margin(egui::Margin::same(24)))
         .show_inside(ui, |ui| {
             ui.horizontal(|ui| {
-                ui.label(theme::heading_text("👥 Database Repository").size(24.0));
+                ui.label(theme::heading_text("Database Repository").size(24.0));
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     let input_fill = ui.visuals().extreme_bg_color;
                     if ui.add(

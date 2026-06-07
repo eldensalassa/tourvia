@@ -32,7 +32,7 @@ fn render_content(app: &mut TourviaApp, ui: &mut Ui) {
                 ui.vertical(|ui| {
                     ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
                         // Add application logo next to the title
-                        ui.add(egui::Image::new(egui::include_image!("../assets/logo.png")).fit_to_exact_size(egui::Vec2::new(75.0, 75.0)));
+                        ui.add(egui::Image::new(egui::include_image!("../assets/logos/logo.png")).fit_to_exact_size(egui::Vec2::new(75.0, 75.0)));
                         
                         ui.add_space(5.0);
                         

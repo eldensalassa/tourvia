@@ -11,7 +11,7 @@ use app::TourviaApp;
 use database::Database;
 
 fn load_icon() -> Option<egui::IconData> {
-    if let Ok(image) = image::load_from_memory(include_bytes!("assets/logo.png")) {
+    if let Ok(image) = image::load_from_memory(include_bytes!("assets/logos/logo.png")) {
         let image = image.into_rgba8();
         let (width, height) = image.dimensions();
         let rgba = image.into_raw();
@@ -66,7 +66,7 @@ fn main() -> eframe::Result<()> {
             
             // Bundle the cross-platform open-source Anton font (Impact alternative)
             let mut fonts = egui::FontDefinitions::default();
-            let font_data = include_bytes!("assets/Anton-Regular.ttf");
+            let font_data = include_bytes!("assets/fonts/Anton-Regular.ttf");
             fonts.font_data.insert("Impact".to_owned(), std::sync::Arc::new(egui::FontData::from_static(font_data)));
             fonts.families.insert(egui::FontFamily::Name("Impact".into()), vec!["Impact".to_owned()]);
             cc.egui_ctx.set_fonts(fonts);

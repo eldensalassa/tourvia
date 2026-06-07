@@ -1,4 +1,4 @@
-use egui::{self, Ui, RichText, Vec2, Color32};
+use egui::{self, Color32, RichText, Stroke, Ui, Vec2};
 
 use crate::app::TourviaApp;
 use crate::domain::tournament::TournamentType;
@@ -11,13 +11,13 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
     // Header with back button
     ui.horizontal(|ui| {
         if ui.add(
-            egui::Button::new(RichText::new("← Back").color(theme::TEXT_SECONDARY()).size(14.0))
+            egui::Button::new(RichText::new("< Back").color(theme::TEXT_SECONDARY()).size(14.0))
                 .fill(Color32::TRANSPARENT),
         ).clicked() {
             app.go_to_dashboard();
         }
         ui.add_space(8.0);
-        ui.label(theme::heading_text("📝 Create New Tournament"));
+        ui.label(theme::heading_text("Create New Tournament"));
     });
 
     ui.add_space(8.0);
@@ -41,12 +41,23 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
                 // ─── Tournament Name ────────────────
                 ui.label(theme::section_header("TOURNAMENT NAME"));
                 ui.add_space(4.0);
-                let name_edit = egui::TextEdit::singleline(&mut app.new_tournament_name)
-                    .hint_text("e.g., Grand Championship 2026")
-                    .desired_width(f32::INFINITY)
-                    .font(egui::FontId::proportional(15.0))
-                    .text_color(theme::TEXT_PRIMARY());
-                let name_resp = ui.add(name_edit);
+                let name_resp = egui::Frame::new()
+                    .fill(theme::BG_DARK())
+                    .stroke(Stroke::new(1.0, theme::BORDER_SUBTLE()))
+                    .corner_radius(4)
+                    .inner_margin(egui::Margin::symmetric(10, 4))
+                    .show(ui, |ui| {
+                        let name_edit = egui::TextEdit::singleline(&mut app.new_tournament_name)
+                            .hint_text("e.g., Grand Championship 2026")
+                            .desired_width(f32::INFINITY)
+                            .font(egui::FontId::proportional(15.0))
+                            .text_color(theme::TEXT_PRIMARY())
+                            .background_color(theme::BG_DARK())
+                            .frame(false)
+                            .margin(egui::Margin::symmetric(0, 4));
+                        ui.add_sized(Vec2::new(ui.available_width(), 30.0), name_edit)
+                    })
+                    .inner;
                 if app.new_tournament_name.trim().is_empty() && name_resp.lost_focus() {
                     ui.label(RichText::new("Name is required").size(10.0).color(theme::ERROR()));
                 }
@@ -58,18 +69,90 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
                 ui.add_space(4.0);
                 
                 if app.global_games.is_empty() {
-                    ui.label(RichText::new("⚠️ No Games registered in Global Roster.").color(theme::WARNING()));
+                    ui.label(RichText::new("No games registered in Global Roster.").color(theme::WARNING()));
                 } else {
                     if app.new_tournament_game.is_empty() {
                         app.new_tournament_game = app.global_games[0].name.clone();
                     }
-                    egui::ComboBox::from_id_salt("tournament_game_combo")
-                        .selected_text(&app.new_tournament_game)
-                        .width(form_width - 56.0)
-                        .show_ui(ui, |ui| {
-                            for g in &app.global_games {
-                                ui.selectable_value(&mut app.new_tournament_game, g.name.clone(), &g.name);
-                            }
+                    let input_fill = theme::BG_DARK();
+                    let field_width = ui.available_width();
+                    ui.scope(|ui| {
+                        let stroke = Stroke::new(1.0, theme::BORDER_SUBTLE());
+                        let rounding = egui::CornerRadius::same(4);
+                        ui.spacing_mut().menu_margin = egui::Margin::ZERO;
+                        let visuals = ui.visuals_mut();
+                        visuals.extreme_bg_color = input_fill;
+                        visuals.window_fill = input_fill;
+                        visuals.window_stroke = Stroke::NONE;
+                        visuals.window_corner_radius = egui::CornerRadius::same(4);
+                        visuals.menu_corner_radius = egui::CornerRadius::same(4);
+                        visuals.popup_shadow = egui::Shadow::NONE;
+                        visuals.panel_fill = input_fill;
+                        visuals.widgets.inactive.bg_fill = input_fill;
+                        visuals.widgets.inactive.weak_bg_fill = input_fill;
+                        visuals.widgets.inactive.bg_stroke = stroke;
+                        visuals.widgets.inactive.corner_radius = rounding;
+                        visuals.widgets.hovered.bg_fill = input_fill;
+                        visuals.widgets.hovered.weak_bg_fill = input_fill;
+                        visuals.widgets.hovered.bg_stroke = stroke;
+                        visuals.widgets.hovered.corner_radius = rounding;
+                        visuals.widgets.active.bg_fill = input_fill;
+                        visuals.widgets.active.weak_bg_fill = input_fill;
+                        visuals.widgets.active.bg_stroke = stroke;
+                        visuals.widgets.active.fg_stroke = Stroke::new(1.0, theme::TEXT_PRIMARY());
+                        visuals.widgets.active.corner_radius = rounding;
+                        visuals.widgets.open.bg_fill = input_fill;
+                        visuals.widgets.open.weak_bg_fill = input_fill;
+                        visuals.widgets.open.bg_stroke = stroke;
+                        visuals.widgets.open.fg_stroke = Stroke::new(1.0, theme::TEXT_PRIMARY());
+                        visuals.widgets.open.corner_radius = rounding;
+                        visuals.selection.bg_fill = theme::ACCENT_BRONZE();
+                        visuals.selection.stroke = Stroke::new(1.0, theme::ACCENT_BRONZE());
+
+                        egui::ComboBox::from_id_salt("tournament_game_combo")
+                            .selected_text(
+                                RichText::new(&app.new_tournament_game)
+                                    .color(theme::TEXT_PRIMARY()),
+                            )
+                            .width(field_width)
+                            .height(148.0)
+                            .truncate()
+                            .show_ui(ui, |ui| {
+                                for g in &app.global_games {
+                                    let is_selected = app.new_tournament_game == g.name;
+                                    let row_size = Vec2::new(ui.available_width(), 28.0);
+                                    let (rect, response) =
+                                        ui.allocate_exact_size(row_size, egui::Sense::click());
+
+                                    if response.hovered() {
+                                        ui.painter().rect_filled(
+                                            rect,
+                                            4.0,
+                                            theme::ACCENT_BRONZE(),
+                                        );
+                                    }
+
+                                    let text_color = if response.hovered() {
+                                        theme::BG_DARK()
+                                    } else if is_selected {
+                                        theme::ACCENT_BRONZE_LIGHT()
+                                    } else {
+                                        theme::TEXT_PRIMARY()
+                                    };
+
+                                    ui.painter().text(
+                                        rect.left_center() + Vec2::new(10.0, 0.0),
+                                        egui::Align2::LEFT_CENTER,
+                                        &g.name,
+                                        egui::FontId::proportional(13.0),
+                                        text_color,
+                                    );
+
+                                    if response.clicked() {
+                                        app.new_tournament_game = g.name.clone();
+                                    }
+                                }
+                            });
                         });
                 }
 
@@ -81,8 +164,8 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
                 
                 ui.horizontal(|ui| {
                     if app.new_tournament_logo.is_some() {
-                        ui.label(RichText::new("✅ Image selected").color(theme::SUCCESS()));
-                        if ui.add(egui::Button::new(RichText::new("🗑").color(theme::ERROR())).fill(Color32::TRANSPARENT)).clicked() {
+                        ui.label(RichText::new("Image selected").color(theme::SUCCESS()));
+                        if ui.add(egui::Button::new(RichText::new("Remove").color(theme::ERROR())).fill(Color32::TRANSPARENT)).clicked() {
                             app.new_tournament_logo = None;
                         }
                     } else {
@@ -113,9 +196,9 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
                 ui.add_space(6.0);
 
                 ui.horizontal_wrapped(|ui| {
-                    type_button(ui, app, TournamentType::SingleElimination, "⚡ Single Elimination", theme::ACCENT_BRONZE());
-                    type_button(ui, app, TournamentType::DoubleElimination, "🔄 Double Elimination", theme::ACCENT_BRONZE_LIGHT());
-                    type_button(ui, app, TournamentType::RoundRobin, "🔁 Round Robin", theme::ACCENT_BRONZE_DARK());
+                    type_button(ui, app, TournamentType::SingleElimination, "Single Elimination", theme::ACCENT_BRONZE());
+                    type_button(ui, app, TournamentType::DoubleElimination, "Double Elimination", theme::ACCENT_BRONZE_LIGHT());
+                    type_button(ui, app, TournamentType::RoundRobin, "Round Robin", theme::ACCENT_BRONZE_DARK());
                 });
 
                 ui.add_space(6.0);
@@ -132,7 +215,7 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
                 // ─── Create Button ──────────────────
                 let can_create = !app.new_tournament_name.trim().is_empty();
                 let create_btn = egui::Button::new(
-                    RichText::new("🏆 Create Tournament")
+                    RichText::new("Create Tournament")
                         .size(15.0)
                         .color(if can_create { theme::BG_DARK() } else { theme::TEXT_MUTED() })
                         .strong(),

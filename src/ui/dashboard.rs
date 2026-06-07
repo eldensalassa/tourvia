@@ -5,24 +5,38 @@ use crate::ui::theme;
 
 /// Render the main dashboard showing all saved tournaments.
 pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
-    ui.add_space(12.0);
+    let available_size = ui.available_size();
+    let content_width = available_size.x.min(1180.0);
+
+    ui.allocate_ui_with_layout(
+        available_size,
+        egui::Layout::top_down(egui::Align::Center),
+        |ui| {
+            ui.set_width(content_width);
+            render_content(app, ui);
+        },
+    );
+}
+
+fn render_content(app: &mut TourviaApp, ui: &mut Ui) {
+    ui.add_space(6.0);
 
     // ─── Header Hero Section ─────────────────────────────
     egui::Frame::new()
         .fill(theme::BG_PANEL())
         .corner_radius(theme::card_rounding())
         .stroke(theme::card_stroke())
-        .inner_margin(egui::Margin::same(24))
+        .inner_margin(egui::Margin::same(18))
         .show(ui, |ui| {
             ui.horizontal(|ui| {
                 ui.vertical(|ui| {
                     ui.horizontal(|ui| {
                         // Add application logo next to the title
-                        ui.add(egui::Image::new(egui::include_image!("../assets/logo.png")).max_height(36.0));
+                        ui.add(egui::Image::new(egui::include_image!("../assets/logo.png")).max_height(32.0));
                         
                         ui.label(
                             RichText::new("Tourvia")
-                                .font(egui::FontId::proportional(32.0))
+                                .font(egui::FontId::proportional(28.0))
                                 .color(theme::ACCENT_BRONZE())
                                 .strong(),
                         );
@@ -36,14 +50,14 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     // Theme toggle
                     let current_mode = theme::get_theme().mode;
-                    let icon = if current_mode == theme::ThemeMode::Dark {
+                    let theme_label = if current_mode == theme::ThemeMode::Dark {
                         "✨ Light"
                     } else {
                         "🌙 Dark"
                     };
                     if ui
                         .add(
-                            egui::Button::new(RichText::new(icon).color(theme::TEXT_PRIMARY()))
+                            egui::Button::new(RichText::new(theme_label).color(theme::TEXT_PRIMARY()))
                                 .fill(theme::BG_ELEVATED())
                                 .corner_radius(theme::button_rounding())
                                 .min_size(Vec2::new(80.0, 36.0)),
@@ -105,7 +119,7 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
             });
         });
 
-    ui.add_space(16.0);
+    ui.add_space(10.0);
 
     // ─── Stats Overview ─────────────────────────────
     let total = app.tournaments.len();
@@ -132,20 +146,38 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
         stat_card(&mut cols[3], "📝 Drafts", draft, theme::TEXT_MUTED());
     });
 
-    ui.add_space(16.0);
+    ui.add_space(10.0);
 
     let filtered_len = app.filtered_tournaments().len();
     let total_len = app.tournaments.len();
 
     // ─── Search Bar & List Header ─────────────────────────────────
     ui.horizontal(|ui| {
-        ui.label(RichText::new("🔍").size(14.0));
-        let search = egui::TextEdit::singleline(&mut app.search_query)
-            .hint_text("Search tournaments...")
-            .desired_width(320.0)
-            .font(egui::FontId::proportional(14.0))
-            .text_color(theme::TEXT_PRIMARY());
-        ui.add(search);
+        let search_width = 360.0;
+        let search_height = 38.0;
+        egui::Frame::new()
+            .fill(theme::BG_DARK())
+            .stroke(Stroke::new(1.0, theme::BORDER_SUBTLE()))
+            .corner_radius(4)
+            .inner_margin(egui::Margin::symmetric(10, 4))
+            .show(ui, |ui| {
+                ui.allocate_ui_with_layout(
+                    Vec2::new(search_width, search_height),
+                    egui::Layout::left_to_right(egui::Align::Center),
+                    |ui| {
+                    let search = egui::TextEdit::singleline(&mut app.search_query)
+                        .hint_text("Search tournaments...")
+                        .desired_width(search_width - 44.0)
+                        .font(egui::FontId::proportional(14.0))
+                        .text_color(theme::TEXT_PRIMARY())
+                        .background_color(theme::BG_DARK())
+                        .frame(false)
+                        .margin(egui::Margin::symmetric(0, 0));
+                    ui.add_sized(Vec2::new(search_width - 44.0, 24.0), search);
+                    ui.label(RichText::new("🔍").size(14.0).color(theme::TEXT_MUTED()));
+                    },
+                );
+            });
 
         if !app.search_query.is_empty() {
             if ui
@@ -170,7 +202,7 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
 
     ui.add_space(8.0);
     ui.add(egui::Separator::default().spacing(0.0));
-    ui.add_space(16.0);
+    ui.add_space(10.0);
 
     // ─── Tournament List ────────────────────────────
     if app.tournaments.is_empty() {
@@ -181,7 +213,7 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
     let filtered = app.filtered_tournaments();
 
     if filtered.is_empty() {
-        ui.add_space(40.0);
+        ui.add_space(32.0);
         ui.vertical_centered(|ui| {
             ui.label(RichText::new("🔍").size(40.0));
             ui.add_space(8.0);
@@ -376,16 +408,16 @@ fn stat_card(ui: &mut Ui, label: &str, count: usize, color: Color32) {
         .fill(theme::BG_CARD())
         .corner_radius(theme::card_rounding())
         .stroke(Stroke::new(1.0, theme::BORDER_SUBTLE()))
-        .inner_margin(egui::Margin::same(16))
+        .inner_margin(egui::Margin::same(12))
         .show(ui, |ui| {
             ui.set_width(ui.available_width());
             ui.vertical(|ui| {
-                ui.label(RichText::new(label).color(theme::TEXT_MUTED()).size(14.0));
+                ui.label(RichText::new(label).color(theme::TEXT_MUTED()).size(12.0));
                 ui.add_space(4.0);
                 ui.label(
                     RichText::new(count.to_string())
                         .color(color)
-                        .size(32.0)
+                        .size(28.0)
                         .strong(),
                 );
             });
@@ -393,7 +425,7 @@ fn stat_card(ui: &mut Ui, label: &str, count: usize, color: Color32) {
 }
 
 fn empty_state(ui: &mut Ui) {
-    ui.add_space(80.0);
+    ui.add_space(48.0);
     ui.vertical_centered(|ui| {
         ui.label(RichText::new("🎮").size(72.0));
         ui.add_space(16.0);

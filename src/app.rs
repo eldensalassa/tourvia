@@ -25,6 +25,7 @@ pub enum View {
     TournamentForm,
     TournamentDetail,
     GlobalRoster,
+    Scoreboard,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -67,6 +68,7 @@ pub struct TourviaApp {
     pub rounds: Vec<Round>,
     pub matches: Vec<Match>,
     pub selected_match: Option<String>,
+    pub scoreboard_display_window_open: bool,
     pub champion: Option<(String, String)>,
 
     // Form state
@@ -158,6 +160,7 @@ impl TourviaApp {
             rounds: Vec::new(),
             matches: Vec::new(),
             selected_match: None,
+            scoreboard_display_window_open: false,
             champion: None,
             new_tournament_name: String::new(),
             new_tournament_type: TournamentType::SingleElimination,
@@ -266,6 +269,7 @@ impl TourviaApp {
     pub fn go_to_dashboard(&mut self) {
         self.current_view = View::Dashboard;
         self.active_tournament = None;
+        self.scoreboard_display_window_open = false;
         
         self.confirm_delete = None;
         self.refresh_tournaments();
@@ -288,12 +292,31 @@ impl TourviaApp {
             self.active_tab = TournamentTab::Overview;
             
             self.selected_match = None;
+            self.scoreboard_display_window_open = false;
             self.show_match_modal = false;
             self.score_input = [String::new(), String::new()];
             self.bracket_zoom = 1.0;
             self.participant_preview_roster = None;
             self.participant_preview_members.clear();
             self.load_tournament_data(&tournament.id);
+        }
+    }
+
+    pub fn open_scoreboard(&mut self) {
+        if self.active_tournament.is_some() {
+            self.show_match_modal = false;
+            self.current_view = View::Scoreboard;
+        }
+    }
+
+    pub fn close_scoreboard(&mut self) {
+        self.current_view = View::TournamentDetail;
+        self.show_match_modal = false;
+    }
+
+    pub fn toggle_scoreboard_display_window(&mut self) {
+        if self.active_tournament.is_some() && !self.matches.is_empty() {
+            self.scoreboard_display_window_open = !self.scoreboard_display_window_open;
         }
     }
 
@@ -741,6 +764,17 @@ impl eframe::App for TourviaApp {
                     crate::ui::global_roster::render(self, ui);
                 });
             }
+            View::Scoreboard => {
+                if let Some(tournament) = self.active_tournament.as_ref() {
+                    let tid = tournament.id.clone();
+                    self.load_tournament_data(&tid);
+                    self.ensure_logos_loaded(ctx);
+                    self.ensure_tournament_logos_loaded(ctx);
+                    crate::ui::scoreboard_view::render(self, ctx);
+                } else {
+                    self.go_to_dashboard();
+                }
+            }
             View::TournamentDetail => {
                 self.ensure_logos_loaded(ctx);
                 self.ensure_tournament_logos_loaded(ctx);
@@ -753,7 +787,7 @@ impl eframe::App for TourviaApp {
                         
                         // Top line: Back button, Title, Actions
                         ui.horizontal(|ui| {
-                            if ui.add(egui::Button::new(egui::RichText::new("← Dashboard").color(ui::theme::TEXT_MUTED()).size(13.0)).fill(egui::Color32::TRANSPARENT)).clicked() {
+                            if ui.add(egui::Button::new(egui::RichText::new("< Dashboard").color(ui::theme::TEXT_MUTED()).size(13.0)).fill(egui::Color32::TRANSPARENT)).clicked() {
                                 self.go_to_dashboard();
                                 return;
                             }
@@ -783,11 +817,25 @@ impl eframe::App for TourviaApp {
                             }
 
                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                if ui.add(egui::Button::new(egui::RichText::new("📤 Export JSON").size(12.0).color(ui::theme::TEXT_SECONDARY())).fill(ui::theme::BG_CARD())).clicked() {
+                                if !self.matches.is_empty() {
+                                    if ui.add(egui::Button::new(egui::RichText::new("Scoreboard").size(12.0).color(ui::theme::TEXT_PRIMARY())).fill(ui::theme::ACCENT_BRONZE())).clicked() {
+                                        self.open_scoreboard();
+                                    }
+                                    let display_label = if self.scoreboard_display_window_open {
+                                        "Close Display"
+                                    } else {
+                                        "Open Display"
+                                    };
+                                    if ui.add(egui::Button::new(egui::RichText::new(display_label).size(12.0).color(ui::theme::TEXT_SECONDARY())).fill(ui::theme::BG_CARD())).clicked() {
+                                        self.toggle_scoreboard_display_window();
+                                    }
+                                }
+                                ui.add_space(8.0);
+                                if ui.add(egui::Button::new(egui::RichText::new("Export JSON").size(12.0).color(ui::theme::TEXT_SECONDARY())).fill(ui::theme::BG_CARD())).clicked() {
                                     self.export_json();
                                 }
                                 if !self.is_draft() {
-                                    if ui.add(egui::Button::new(egui::RichText::new("🔄 Reset").size(12.0).color(ui::theme::WARNING())).fill(ui::theme::BG_CARD())).clicked() {
+                                    if ui.add(egui::Button::new(egui::RichText::new("Reset").size(12.0).color(ui::theme::WARNING())).fill(ui::theme::BG_CARD())).clicked() {
                                         self.reset_bracket();
                                     }
                                 }
@@ -875,6 +923,16 @@ impl eframe::App for TourviaApp {
                 
                 // Participant Preview Modal
                 ui::participant_panel::render_preview_modal(self, ctx);
+            }
+        }
+
+        if self.scoreboard_display_window_open {
+            if self.active_tournament.is_some() {
+                self.ensure_logos_loaded(ctx);
+                self.ensure_tournament_logos_loaded(ctx);
+                crate::ui::scoreboard_view::render_display_window(self, ctx);
+            } else {
+                self.scoreboard_display_window_open = false;
             }
         }
         

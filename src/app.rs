@@ -25,7 +25,6 @@ pub enum View {
     TournamentForm,
     TournamentDetail,
     GlobalRoster,
-    Scoreboard,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -318,18 +317,6 @@ impl TourviaApp {
             self.participant_preview_members.clear();
             self.load_tournament_data(&tournament.id);
         }
-    }
-
-    pub fn open_scoreboard(&mut self) {
-        if self.active_tournament.is_some() {
-            self.show_match_modal = false;
-            self.current_view = View::Scoreboard;
-        }
-    }
-
-    pub fn close_scoreboard(&mut self) {
-        self.current_view = View::TournamentDetail;
-        self.show_match_modal = false;
     }
 
     pub fn toggle_scoreboard_display_window(&mut self) {
@@ -813,17 +800,6 @@ impl eframe::App for TourviaApp {
                     crate::ui::global_roster::render(self, ui);
                 });
             }
-            View::Scoreboard => {
-                if let Some(tournament) = self.active_tournament.as_ref() {
-                    let tid = tournament.id.clone();
-                    self.load_tournament_data(&tid);
-                    self.ensure_logos_loaded(ctx);
-                    self.ensure_tournament_logos_loaded(ctx);
-                    crate::ui::scoreboard_view::render(self, ctx);
-                } else {
-                    self.go_to_dashboard();
-                }
-            }
             View::TournamentDetail => {
                 self.ensure_logos_loaded(ctx);
                 self.ensure_tournament_logos_loaded(ctx);
@@ -871,20 +847,6 @@ impl eframe::App for TourviaApp {
                             }
 
                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                if !self.matches.is_empty() {
-                                    if ui.add(egui::Button::new(egui::RichText::new("Scoreboard").size(12.0).color(ui::theme::BG_DARK())).fill(ui::theme::ACCENT_BRONZE())).clicked() {
-                                        self.open_scoreboard();
-                                    }
-                                    let display_label = if self.scoreboard_display_window_open {
-                                        "Close Display"
-                                    } else {
-                                        "Open Display"
-                                    };
-                                    if ui.add(egui::Button::new(egui::RichText::new(display_label).size(12.0).color(ui::theme::TEXT_SECONDARY())).fill(ui::theme::BG_CARD())).clicked() {
-                                        self.toggle_scoreboard_display_window();
-                                    }
-                                }
-                                ui.add_space(8.0);
                                 if ui.add(egui::Button::new(egui::RichText::new("Export JSON").size(12.0).color(ui::theme::TEXT_SECONDARY())).fill(ui::theme::BG_CARD())).clicked() {
                                     self.export_json();
                                 }

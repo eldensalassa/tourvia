@@ -203,11 +203,44 @@ pub fn render_modal(app: &mut TourviaApp, ctx: &egui::Context) {
                                 ui.horizontal(|ui| {
                                     ui.label(theme::heading_text("LIVE MATCH CONTROLS").size(16.0));
                                     ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                        let display_text = if app.scoreboard_display_window_open {
+                                            "DISPLAY: ON"
+                                        } else {
+                                            "DISPLAY: OFF"
+                                        };
+                                        let display_fill = if app.scoreboard_display_window_open {
+                                            theme::SUCCESS()
+                                        } else {
+                                            ui.visuals().extreme_bg_color
+                                        };
+                                        let display_text_color = if app.scoreboard_display_window_open {
+                                            theme::BG_DARK()
+                                        } else {
+                                            theme::TEXT_PRIMARY()
+                                        };
+                                        let display_btn = egui::Button::new(
+                                            RichText::new(display_text)
+                                                .color(display_text_color)
+                                                .strong(),
+                                        )
+                                        .fill(display_fill)
+                                        .stroke(Stroke::new(1.0, if app.scoreboard_display_window_open { theme::SUCCESS() } else { theme::BORDER_SUBTLE() }))
+                                        .corner_radius(theme::badge_rounding())
+                                        .min_size(Vec2::new(112.0, 32.0));
+                                        if ui.add(display_btn).clicked() {
+                                            app.toggle_scoreboard_display_window();
+                                        }
+
+                                        ui.add_space(6.0);
+
                                         let status_text = if app.show_broadcast_window { "OVERLAY: ON" } else { "OVERLAY: OFF" };
-                                        let bg_color = if app.show_broadcast_window { theme::SUCCESS() } else { theme::TEXT_MUTED() };
-                                        let toggle_btn = egui::Button::new(RichText::new(status_text).color(theme::BG_DARK()).strong())
+                                        let bg_color = if app.show_broadcast_window { theme::SUCCESS() } else { ui.visuals().extreme_bg_color };
+                                        let text_color = if app.show_broadcast_window { theme::BG_DARK() } else { theme::TEXT_PRIMARY() };
+                                        let toggle_btn = egui::Button::new(RichText::new(status_text).color(text_color).strong())
                                             .fill(bg_color)
-                                            .corner_radius(theme::badge_rounding());
+                                            .stroke(Stroke::new(1.0, if app.show_broadcast_window { theme::SUCCESS() } else { theme::BORDER_SUBTLE() }))
+                                            .corner_radius(theme::badge_rounding())
+                                            .min_size(Vec2::new(112.0, 32.0));
                                         if ui.add(toggle_btn).clicked() {
                                             app.show_broadcast_window = !app.show_broadcast_window;
                                         }

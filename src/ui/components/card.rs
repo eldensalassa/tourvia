@@ -101,6 +101,7 @@ impl<'a> Card<'a> {
                 .shadow(shadow)
                 .inner_margin(self.padding)
                 .show(card_ui, |inner_ui| {
+                    inner_ui.set_min_size(rect.size() - self.padding.sum());
                     (self.content)(inner_ui);
                 });
         });

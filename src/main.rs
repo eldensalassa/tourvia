@@ -64,13 +64,11 @@ fn main() -> eframe::Result<()> {
             // Install image loaders for egui to load textures
             egui_extras::install_image_loaders(&cc.egui_ctx);
             
-            // Load custom gaming font if available
+            // Bundle the cross-platform open-source Anton font (Impact alternative)
             let mut fonts = egui::FontDefinitions::default();
-            if let Ok(font_data) = std::fs::read("C:\\Windows\\Fonts\\impact.ttf") {
-                fonts.font_data.insert("Impact".to_owned(), std::sync::Arc::new(egui::FontData::from_owned(font_data)));
-
-                fonts.families.insert(egui::FontFamily::Name("Impact".into()), vec!["Impact".to_owned()]);
-            }
+            let font_data = include_bytes!("assets/Anton-Regular.ttf");
+            fonts.font_data.insert("Impact".to_owned(), std::sync::Arc::new(egui::FontData::from_static(font_data)));
+            fonts.families.insert(egui::FontFamily::Name("Impact".into()), vec!["Impact".to_owned()]);
             cc.egui_ctx.set_fonts(fonts);
             
             let mut app = TourviaApp::new(db);

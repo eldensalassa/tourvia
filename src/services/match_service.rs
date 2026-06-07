@@ -228,7 +228,7 @@ impl MatchService {
         let _is_round_robin = tournament.tournament_type == TournamentType::RoundRobin;
 
         let total_matches = matches.len();
-        let completed_matches = matches.iter().filter(|m| m.status == MatchStatus::Completed).count();
+        let completed_matches = matches.iter().filter(|m| m.status == MatchStatus::Completed || m.status == MatchStatus::Bye).count();
         let pending_matches = matches.iter().filter(|m| m.status == MatchStatus::Pending).count();
         let in_progress_matches = matches.iter().filter(|m| m.status == MatchStatus::InProgress).count();
         let bye_matches = matches.iter().filter(|m| m.status == MatchStatus::Bye).count();

@@ -156,7 +156,7 @@ fn render_round_robin_view(app: &mut TourviaApp, ui: &mut Ui) {
                             ui.label(theme::section_header(&round.name));
                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                                 let total = round_matches.len();
-                                let completed = round_matches.iter().filter(|m| m.status == MatchStatus::Completed).count();
+                                let completed = round_matches.iter().filter(|m| m.status == MatchStatus::Completed || m.status == MatchStatus::Bye).count();
                                 let mut text = format!("{}/{} Completed", completed, total);
                                 let mut color = theme::TEXT_MUTED();
                                 let mut bg = theme::BG_ELEVATED();

@@ -13,26 +13,33 @@ pub enum ThemeMode {
 #[derive(Debug, Clone, Copy)]
 pub struct ThemeConfig {
     pub mode: ThemeMode,
+    // Surfaces
     pub bg_dark: Color32,
     pub bg_panel: Color32,
     pub bg_card: Color32,
     pub bg_card_hover: Color32,
     pub bg_input: Color32,
     pub bg_elevated: Color32,
+    // Accents
     pub accent: Color32,
     pub accent_light: Color32,
     pub accent_dark: Color32,
     pub gold: Color32,
+    // Semantics
     pub success: Color32,
     pub warning: Color32,
     pub error: Color32,
     pub info: Color32,
+    // Typography
     pub text_primary: Color32,
     pub text_secondary: Color32,
     pub text_muted: Color32,
+    // Borders
     pub border: Color32,
     pub border_subtle: Color32,
+    pub border_focus: Color32,
     pub connector_line: Color32,
+    // Match specific states
     pub match_pending: Color32,
     pub match_in_progress: Color32,
     pub match_completed: Color32,
@@ -43,60 +50,62 @@ impl ThemeConfig {
     pub const fn dark() -> Self {
         Self {
             mode: ThemeMode::Dark,
-            bg_dark: Color32::from_rgb(9, 9, 11),       // Very dark zinc
-            bg_panel: Color32::from_rgb(24, 24, 27),    // Dark zinc
-            bg_card: Color32::from_rgb(39, 39, 42),     // Elevated zinc
-            bg_card_hover: Color32::from_rgb(63, 63, 70),
-            bg_input: Color32::from_rgb(24, 24, 27),    
-            bg_elevated: Color32::from_rgb(45, 45, 48),
-            accent: Color32::from_rgb(197, 160, 89),    // Refined Bronze
-            accent_light: Color32::from_rgb(230, 201, 142), // Lighter bronze
-            accent_dark: Color32::from_rgb(138, 106, 45),
-            gold: Color32::from_rgb(212, 175, 55),
-            success: Color32::from_rgb(16, 185, 129),   // Emerald green
-            warning: Color32::from_rgb(245, 158, 11),   // Amber
-            error: Color32::from_rgb(239, 68, 68),      // Red
-            info: Color32::from_rgb(59, 130, 246),      // Blue
-            text_primary: Color32::from_rgb(250, 250, 250), // Off-white
-            text_secondary: Color32::from_rgb(161, 161, 170), // Zinc-400
-            text_muted: Color32::from_rgb(113, 113, 122),   // Zinc-500
-            border: Color32::from_rgb(63, 63, 70),      // Zinc-700
-            border_subtle: Color32::from_rgb(39, 39, 42), // Zinc-800
-            connector_line: Color32::from_rgb(82, 82, 91), // Zinc-600
-            match_pending: Color32::from_rgb(39, 39, 42),
-            match_in_progress: Color32::from_rgb(66, 50, 25), // Tinted bronze
-            match_completed: Color32::from_rgb(25, 40, 30),
-            match_bye: Color32::from_rgb(63, 63, 70),
+            bg_dark: Color32::from_rgb(15, 25, 35),       // #0F1923 (Deep Esports Charcoal)
+            bg_panel: Color32::from_rgb(20, 25, 30),      // Slightly lighter panel
+            bg_card: Color32::from_rgb(31, 35, 38),       // #1F2326
+            bg_card_hover: Color32::from_rgb(43, 47, 50), // #2B2F32
+            bg_input: Color32::from_rgb(20, 25, 30),    
+            bg_elevated: Color32::from_rgb(31, 35, 38), 
+            accent: Color32::from_rgb(229, 168, 83),    // Vibrant Premium Bronze (kept as requested)
+            accent_light: Color32::from_rgb(245, 203, 138),
+            accent_dark: Color32::from_rgb(173, 115, 33),
+            gold: Color32::from_rgb(255, 215, 0),
+            success: Color32::from_rgb(52, 211, 153),   // emerald-400
+            warning: Color32::from_rgb(251, 191, 36),   // amber-400
+            error: Color32::from_rgb(255, 70, 85),      // #FF4655 (Valorant Red)
+            info: Color32::from_rgb(96, 165, 250),      // blue-400
+            text_primary: Color32::from_rgb(250, 250, 250), // zinc-50
+            text_secondary: Color32::from_rgb(161, 161, 170), // zinc-400
+            text_muted: Color32::from_rgb(113, 113, 122),   // zinc-500
+            border: Color32::from_rgb(82, 82, 91),      // zinc-600
+            border_subtle: Color32::from_rgb(63, 63, 70), // zinc-700
+            border_focus: Color32::from_rgb(229, 168, 83),
+            connector_line: Color32::from_rgb(100, 100, 110), 
+            match_pending: Color32::from_rgb(31, 35, 38),
+            match_in_progress: Color32::from_rgb(89, 65, 32),
+            match_completed: Color32::from_rgb(32, 60, 45),
+            match_bye: Color32::from_rgb(43, 47, 50),
         }
     }
 
     pub const fn light() -> Self {
         Self {
             mode: ThemeMode::Light,
-            bg_dark: Color32::from_rgb(240, 240, 240),
-            bg_panel: Color32::from_rgb(250, 250, 250),
-            bg_card: Color32::from_rgb(255, 255, 255),
-            bg_card_hover: Color32::from_rgb(245, 245, 245),
+            bg_dark: Color32::from_rgb(244, 244, 245), // zinc-100
+            bg_panel: Color32::from_rgb(250, 250, 250), // zinc-50
+            bg_card: Color32::from_rgb(255, 255, 255), // white
+            bg_card_hover: Color32::from_rgb(244, 244, 245), // zinc-100
             bg_input: Color32::from_rgb(255, 255, 255),
             bg_elevated: Color32::from_rgb(255, 255, 255),
-            accent: Color32::from_rgb(0, 122, 204), // Blue accent for light mode
-            accent_light: Color32::from_rgb(51, 153, 255),
-            accent_dark: Color32::from_rgb(0, 82, 136),
+            accent: Color32::from_rgb(217, 138, 30), // Darker bronze for light mode
+            accent_light: Color32::from_rgb(235, 173, 85),
+            accent_dark: Color32::from_rgb(150, 90, 15),
             gold: Color32::from_rgb(218, 165, 32),
-            success: Color32::from_rgb(34, 139, 34),
-            warning: Color32::from_rgb(205, 133, 63),
-            error: Color32::from_rgb(220, 20, 60),
-            info: Color32::from_rgb(70, 130, 180),
-            text_primary: Color32::from_rgb(20, 20, 20),
-            text_secondary: Color32::from_rgb(80, 80, 80),
-            text_muted: Color32::from_rgb(120, 120, 120),
-            border: Color32::from_rgb(210, 210, 210),
-            border_subtle: Color32::from_rgb(230, 230, 230),
-            connector_line: Color32::from_rgb(180, 180, 180),
+            success: Color32::from_rgb(5, 150, 105), // emerald-600
+            warning: Color32::from_rgb(217, 119, 6), // amber-600
+            error: Color32::from_rgb(220, 38, 38), // red-600
+            info: Color32::from_rgb(37, 99, 235), // blue-600
+            text_primary: Color32::from_rgb(24, 24, 27), // zinc-900
+            text_secondary: Color32::from_rgb(82, 82, 91), // zinc-600
+            text_muted: Color32::from_rgb(161, 161, 170), // zinc-400
+            border: Color32::from_rgb(212, 212, 216), // zinc-300
+            border_subtle: Color32::from_rgb(228, 228, 231), // zinc-200
+            border_focus: Color32::from_rgb(217, 138, 30),
+            connector_line: Color32::from_rgb(161, 161, 170),
             match_pending: Color32::from_rgb(255, 255, 255),
-            match_in_progress: Color32::from_rgb(230, 245, 255),
-            match_completed: Color32::from_rgb(230, 255, 230),
-            match_bye: Color32::from_rgb(240, 240, 240),
+            match_in_progress: Color32::from_rgb(254, 243, 199),
+            match_completed: Color32::from_rgb(209, 250, 229),
+            match_bye: Color32::from_rgb(244, 244, 245),
         }
     }
 }
@@ -133,6 +142,7 @@ pub fn TEXT_SECONDARY() -> Color32 { get_theme().text_secondary }
 pub fn TEXT_MUTED() -> Color32 { get_theme().text_muted }
 pub fn BORDER() -> Color32 { get_theme().border }
 pub fn BORDER_SUBTLE() -> Color32 { get_theme().border_subtle }
+pub fn BORDER_FOCUS() -> Color32 { get_theme().border_focus }
 pub fn CONNECTOR_LINE() -> Color32 { get_theme().connector_line }
 pub fn MATCH_PENDING() -> Color32 { get_theme().match_pending }
 pub fn MATCH_IN_PROGRESS() -> Color32 { get_theme().match_in_progress }
@@ -143,14 +153,14 @@ pub fn MATCH_BYE() -> Color32 { get_theme().match_bye }
 
 pub fn heading_text(text: &str) -> RichText {
     RichText::new(text)
-        .font(FontId::new(28.0, FontFamily::Proportional))
+        .font(FontId::new(28.0, FontFamily::Name("Impact".into())))
         .color(TEXT_PRIMARY())
         .strong()
 }
 
 pub fn subheading_text(text: &str) -> RichText {
     RichText::new(text)
-        .font(FontId::new(20.0, FontFamily::Proportional))
+        .font(FontId::new(20.0, FontFamily::Name("Impact".into())))
         .color(TEXT_PRIMARY())
         .strong()
 }
@@ -175,29 +185,51 @@ pub fn small_text(text: &str) -> RichText {
 
 pub fn champion_text(text: &str) -> RichText {
     RichText::new(text)
-        .font(FontId::new(24.0, FontFamily::Proportional))
+        .font(FontId::new(24.0, FontFamily::Name("Impact".into())))
         .color(GOLD())
         .strong()
 }
 
 pub fn section_header(text: &str) -> RichText {
-    RichText::new(text)
-        .font(FontId::new(14.0, FontFamily::Proportional))
+    RichText::new(text.to_uppercase())
+        .font(FontId::new(14.0, FontFamily::Name("Impact".into())))
         .color(ACCENT_BRONZE_LIGHT())
         .strong()
 }
 
 // ─── Styling Helpers ─────────────────────────────────
 pub fn card_rounding() -> CornerRadius {
-    CornerRadius::same(12) // Modern, larger rounding
+    CornerRadius::same(0) // Sharp edges for tactical look
 }
 
 pub fn button_rounding() -> CornerRadius {
-    CornerRadius::same(8) // Modern button rounding
+    CornerRadius::same(0) // Sharp edges
+}
+
+pub fn badge_rounding() -> CornerRadius {
+    CornerRadius::same(2) // Slightly rounded to differentiate from structural cards
 }
 
 pub fn card_stroke() -> Stroke {
     Stroke::new(1.0, get_theme().border_subtle)
+}
+
+pub fn card_shadow() -> egui::epaint::Shadow {
+    egui::epaint::Shadow {
+        offset: [0, 4],
+        blur: 16,
+        spread: 0,
+        color: egui::Color32::from_black_alpha(if get_theme().mode == ThemeMode::Dark { 140 } else { 20 }),
+    }
+}
+
+pub fn hover_shadow() -> egui::epaint::Shadow {
+    egui::epaint::Shadow {
+        offset: [0, 8],
+        blur: 24,
+        spread: 0,
+        color: egui::Color32::from_black_alpha(if get_theme().mode == ThemeMode::Dark { 180 } else { 40 }),
+    }
 }
 
 /// Apply the Tourvia theme to an egui context.
@@ -236,22 +268,26 @@ pub fn apply_theme(ctx: &egui::Context) {
     visuals.widgets.open.bg_fill = theme.bg_elevated;
     visuals.widgets.open.fg_stroke = Stroke::new(1.0, theme.accent);
 
-    visuals.selection.bg_fill = theme.accent; // Or partially transparent
+    visuals.selection.bg_fill = theme.accent.linear_multiply(0.4); 
     visuals.selection.stroke = Stroke::new(1.0, theme.accent);
 
-    visuals.window_stroke = Stroke::new(1.0, theme.border);
-    visuals.window_corner_radius = CornerRadius::same(12);
+    visuals.window_stroke = Stroke::new(2.0, theme.accent); // Strong window border
+    visuals.window_corner_radius = CornerRadius::same(0); // Sharp windows
+    visuals.window_shadow = card_shadow();
 
     visuals.striped = true;
 
     style.visuals = visuals;
 
-    // Spacing
-    style.spacing.item_spacing = Vec2::new(12.0, 10.0);
-    style.spacing.window_margin = egui::Margin::same(20);
-    style.spacing.button_padding = Vec2::new(16.0, 8.0);
-    style.spacing.interact_size = Vec2::new(48.0, 32.0);
-    style.spacing.indent = 18.0;
+    // Enhanced Spacing for modern breathable UI
+    style.spacing.item_spacing = Vec2::new(16.0, 12.0); // More spacing between items
+    style.spacing.window_margin = egui::Margin::same(24);
+    style.spacing.button_padding = Vec2::new(20.0, 10.0); // Larger buttons
+    style.spacing.interact_size = Vec2::new(56.0, 36.0);
+    style.spacing.indent = 20.0;
+    
+    // Smooth animations
+    style.animation_time = 0.15;
 
     ctx.set_style(style);
 }

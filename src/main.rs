@@ -29,8 +29,17 @@ fn main() -> eframe::Result<()> {
     // Initialize logger
     env_logger::init();
 
+    // Determine safe data directory
+    let db_path = if let Some(proj_dirs) = directories::ProjectDirs::from("", "TourviaTeam", "Tourvia") {
+        let data_dir = proj_dirs.data_dir();
+        std::fs::create_dir_all(data_dir).unwrap_or_default();
+        data_dir.join("tourvia.db")
+    } else {
+        std::path::PathBuf::from("tourvia.db")
+    };
+
     // Open database
-    let db = Database::open("tourvia.db").expect("Failed to open database");
+    let db = Database::open(db_path.to_str().unwrap()).expect("Failed to open database");
 
     // Configure window
     let mut viewport = egui::ViewportBuilder::default()

@@ -806,7 +806,7 @@ impl eframe::App for TourviaApp {
                         
                         // Top line: Back button, Title, Actions
                         ui.horizontal(|ui| {
-                            if ui.add(egui::Button::new(egui::RichText::new("← Dashboard").color(ui::theme::TEXT_MUTED()).size(13.0)).fill(egui::Color32::TRANSPARENT)).clicked() {
+                            if ui.add(egui::Button::new(egui::RichText::new("⬅ Dashboard").color(ui::theme::TEXT_MUTED()).size(13.0)).fill(egui::Color32::TRANSPARENT)).clicked() {
                                 self.go_to_dashboard();
                                 return;
                             }

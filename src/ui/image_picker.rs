@@ -217,6 +217,7 @@ pub fn render_modal(app: &mut TourviaApp, ctx: &egui::Context) {
                                 RichText::new("📁 Browse Local File").color(theme::TEXT_PRIMARY()).size(12.0)
                             )
                                 .fill(theme::BG_CARD_HOVER())
+                                .stroke(egui::Stroke::new(1.0, theme::BORDER_SUBTLE()))
                                 .corner_radius(theme::button_rounding())
                                 .min_size(Vec2::new(140.0, 34.0))
                         ).clicked() {

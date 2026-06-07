@@ -245,11 +245,12 @@ pub fn apply_theme(ctx: &egui::Context) {
 
     visuals.panel_fill = theme.bg_panel;
     visuals.window_fill = theme.bg_elevated;
-    visuals.extreme_bg_color = theme.bg_dark;
+    visuals.extreme_bg_color = Color32::from_rgb(13, 17, 22); // Distinct darker inset for inputs
     visuals.faint_bg_color = theme.bg_card;
 
     // Widget styles
     visuals.widgets.inactive.bg_fill = theme.bg_card;
+    visuals.widgets.inactive.bg_stroke = Stroke::new(1.0, Color32::from_rgb(45, 50, 55)); // Visible border for inputs
     visuals.widgets.inactive.fg_stroke = Stroke::new(1.0, theme.text_secondary);
     visuals.widgets.inactive.corner_radius = button_rounding();
     visuals.widgets.inactive.weak_bg_fill = theme.bg_card;

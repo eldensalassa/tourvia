@@ -36,8 +36,10 @@ pub fn render_modal(app: &mut TourviaApp, ctx: &egui::Context) {
                     });
                 });
                 
-            let (rect, _) = ui.allocate_exact_size(Vec2::new(modal_width, 2.0), egui::Sense::hover());
-            ui.painter().rect_filled(rect, 0.0, theme::ACCENT_BRONZE());
+            ui.scope(|ui| {
+                ui.visuals_mut().widgets.noninteractive.bg_stroke = egui::Stroke::new(2.0, theme::ACCENT_BRONZE());
+                ui.add(egui::Separator::default().horizontal().spacing(0.0));
+            });
 
             // === Body ===
             egui::Frame::new()

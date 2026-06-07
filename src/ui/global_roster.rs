@@ -136,11 +136,12 @@ fn render_list(app: &mut TourviaApp, ui: &mut egui::Ui) {
                         }
                     });
                 } else {
-                    if ui.add(egui::Button::new(RichText::new("🖼 Select Logo").color(theme::TEXT_PRIMARY()))
-                        .fill(theme::BG_CARD())
+                    let btn = egui::Button::new(RichText::new("📁 Select Logo").color(theme::TEXT_PRIMARY()).size(13.0))
+                        .fill(theme::BG_CARD_HOVER())
+                        .stroke(egui::Stroke::new(1.0, theme::BORDER_SUBTLE()))
                         .corner_radius(theme::button_rounding())
-                        .min_size(Vec2::new(ui.available_width(), 36.0))
-                    ).clicked() {
+                        .min_size(Vec2::new(ui.available_width(), 36.0));
+                    if ui.add(btn).clicked() {
                         open_dialog = true;
                     }
                 }
@@ -362,10 +363,12 @@ fn render_detail(app: &mut TourviaApp, ui: &mut egui::Ui) {
                 ui.label(RichText::new(&roster.game).color(theme::TEXT_MUTED()).size(14.0));
                 
                 ui.add_space(12.0);
-                if ui.add(egui::Button::new(RichText::new("🖼 Change Logo").color(theme::TEXT_PRIMARY()))
-                    .fill(theme::BG_ELEVATED())
+                let btn = egui::Button::new(RichText::new("📁 Change Logo").color(theme::TEXT_PRIMARY()).size(13.0))
+                    .fill(theme::BG_CARD_HOVER())
+                    .stroke(egui::Stroke::new(1.0, theme::BORDER_SUBTLE()))
                     .corner_radius(theme::button_rounding())
-                ).clicked() {
+                    .min_size(Vec2::new(140.0, 32.0));
+                if ui.add(btn).clicked() {
                     app.image_picker_open = true;
                     app.image_picker_target = Some(crate::app::ImageTarget::ExistingRosterLogo(roster.id.clone()));
                     app.image_picker_query = roster.name.clone();
@@ -486,10 +489,12 @@ fn render_detail(app: &mut TourviaApp, ui: &mut egui::Ui) {
                         app.member_photo_textures.remove("__new_member_photo");
                     }
                 } else {
-                    if ui.add(egui::Button::new(RichText::new("📷 Select Photo").color(theme::TEXT_PRIMARY()))
-                        .fill(theme::BG_ELEVATED())
+                    let btn = egui::Button::new(RichText::new("📷 Select Photo").color(theme::TEXT_PRIMARY()).size(13.0))
+                        .fill(theme::BG_CARD_HOVER())
+                        .stroke(egui::Stroke::new(1.0, theme::BORDER_SUBTLE()))
                         .corner_radius(theme::button_rounding())
-                    ).clicked() {
+                        .min_size(Vec2::new(120.0, 32.0));
+                    if ui.add(btn).clicked() {
                         open_member_dialog = true;
                     }
                 }

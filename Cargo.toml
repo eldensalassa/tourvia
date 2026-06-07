@@ -10,6 +10,8 @@ eframe = { version = "0.31.1", default-features = false, features = [
     "accesskit",
     "default_fonts",
     "wgpu",
+    "x11",
+    "wayland",
 ] }
 egui = "0.31.1"
 egui_extras = { version = "0.31.1", features = ["image"] }

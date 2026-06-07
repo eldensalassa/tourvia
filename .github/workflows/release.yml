@@ -46,9 +46,15 @@ jobs:
       - name: Build Release
         run: cargo build --release
 
-      - name: Compress Binary
+      - name: Compress Binary (Windows)
+        if: matrix.os == 'windows-latest'
         run: ${{ matrix.compress_cmd }}
-        shell: ${{ matrix.shell }}
+        shell: powershell
+
+      - name: Compress Binary (Linux/MacOS)
+        if: matrix.os != 'windows-latest'
+        run: ${{ matrix.compress_cmd }}
+        shell: bash
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

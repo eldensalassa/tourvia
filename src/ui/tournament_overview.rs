@@ -73,7 +73,39 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
 
             if counts.total > 0 || champion.is_some() {
                 ui.add_space(14.0);
-                render_match_focus(app, ui, focus_match.as_ref(), champion.as_ref());
+                
+                let mut completed_matches: Vec<Match> = app
+                    .matches
+                    .iter()
+                    .filter(|m| m.status == MatchStatus::Completed)
+                    .cloned()
+                    .collect();
+                completed_matches.reverse(); // Show latest completed matches first
+                
+                let mut display_cards = vec![
+                    ("Match Focus".to_string(), focus_match.clone(), champion.clone())
+                ];
+                
+                for m in completed_matches {
+                    display_cards.push(("Completed Match".to_string(), Some(m), None));
+                }
+                
+                for (row_index, chunk) in display_cards.chunks(3).enumerate() {
+                    if row_index > 0 {
+                        ui.add_space(14.0);
+                    }
+                    ui.columns(3, |columns| {
+                        for (i, (title, match_opt, champ_opt)) in chunk.iter().enumerate() {
+                            render_match_card(
+                                app,
+                                &mut columns[i],
+                                title,
+                                match_opt.as_ref(),
+                                champ_opt.as_ref(),
+                            );
+                        }
+                    });
+                }
             }
         });
 }
@@ -91,6 +123,7 @@ fn render_summary(
         .corner_radius(theme::card_rounding())
         .inner_margin(egui::Margin::same(18))
         .show(ui, |ui| {
+            ui.set_width(ui.available_width());
             ui.horizontal(|ui| {
                 render_tournament_mark(app, ui, tournament);
                 ui.add_space(14.0);
@@ -155,7 +188,7 @@ fn render_tournament_mark(app: &TourviaApp, ui: &mut Ui, tournament: &Tournament
     ui.painter().rect_stroke(
         rect,
         4.0,
-        Stroke::new(1.0, theme::BORDER_SUBTLE()),
+        Stroke::new(1.0, theme::ACCENT_BRONZE_LIGHT()),
         egui::StrokeKind::Inside,
     );
     ui.painter().text(
@@ -163,7 +196,7 @@ fn render_tournament_mark(app: &TourviaApp, ui: &mut Ui, tournament: &Tournament
         egui::Align2::CENTER_CENTER,
         "TV",
         egui::FontId::new(20.0, egui::FontFamily::Name("Impact".into())),
-        theme::TEXT_MUTED(),
+        theme::ACCENT_BRONZE_LIGHT(),
     );
 }
 
@@ -175,6 +208,7 @@ fn render_stats(app: &TourviaApp, ui: &mut Ui, counts: &MatchCounts) {
             app.participants.len().to_string(),
             "Registered teams",
             theme::TEXT_PRIMARY(),
+            None,
         );
         stat_card(
             &mut columns[1],
@@ -182,6 +216,7 @@ fn render_stats(app: &TourviaApp, ui: &mut Ui, counts: &MatchCounts) {
             format!("{}%", (counts.progress() * 100.0).round() as i32),
             if counts.total == 0 { "No bracket yet" } else { "Matches resolved" },
             theme::ACCENT_BRONZE(),
+            Some(counts.progress()),
         );
         stat_card(
             &mut columns[2],
@@ -193,6 +228,7 @@ fn render_stats(app: &TourviaApp, ui: &mut Ui, counts: &MatchCounts) {
             } else {
                 theme::TEXT_SECONDARY()
             },
+            None,
         );
     });
 }
@@ -204,6 +240,7 @@ fn render_description(ui: &mut Ui, tournament: &Tournament) {
         .corner_radius(theme::card_rounding())
         .inner_margin(egui::Margin::same(16))
         .show(ui, |ui| {
+            ui.set_width(ui.available_width());
             ui.label(theme::section_header("Description"));
             ui.add_space(8.0);
             ui.label(
@@ -217,9 +254,10 @@ fn render_description(ui: &mut Ui, tournament: &Tournament) {
         });
 }
 
-fn render_match_focus(
+fn render_match_card(
     app: &TourviaApp,
     ui: &mut Ui,
+    title: &str,
     focus_match: Option<&Match>,
     champion: Option<&(String, String)>,
 ) {
@@ -227,10 +265,17 @@ fn render_match_focus(
         .fill(theme::BG_PANEL())
         .stroke(theme::card_stroke())
         .corner_radius(theme::card_rounding())
-        .inner_margin(egui::Margin::same(16))
+        .inner_margin(egui::Margin::same(14))
         .show(ui, |ui| {
-            ui.label(theme::section_header("Match Focus"));
-            ui.add_space(10.0);
+            ui.set_width(ui.available_width());
+            ui.set_min_height(72.0);
+            ui.label(
+                RichText::new(title.to_uppercase())
+                    .size(11.0)
+                    .color(theme::TEXT_MUTED())
+                    .strong(),
+            );
+            ui.add_space(7.0);
 
             if let Some(m) = focus_match {
                 ui.horizontal(|ui| {
@@ -247,20 +292,11 @@ fn render_match_focus(
                 });
 
                 ui.add_space(10.0);
+                let is_completed = m.status == MatchStatus::Completed;
                 ui.horizontal(|ui| {
-                    ui.label(
-                        RichText::new(player_name(&m.player1_name))
-                            .size(17.0)
-                            .color(theme::TEXT_PRIMARY())
-                            .strong(),
-                    );
+                    render_player_in_card(app, ui, &m.player1_name, &m.player1_id, &m.winner_id, is_completed);
                     ui.label(RichText::new("vs").size(12.0).color(theme::TEXT_MUTED()));
-                    ui.label(
-                        RichText::new(player_name(&m.player2_name))
-                            .size(17.0)
-                            .color(theme::TEXT_PRIMARY())
-                            .strong(),
-                    );
+                    render_player_in_card(app, ui, &m.player2_name, &m.player2_id, &m.winner_id, is_completed);
                 });
 
                 if m.status == MatchStatus::Completed || m.status == MatchStatus::InProgress {
@@ -278,7 +314,7 @@ fn render_match_focus(
                 ui.label(theme::champion_text(name));
             } else {
                 ui.label(
-                    RichText::new("No playable match is available.")
+                    RichText::new("No match available.")
                         .size(14.0)
                         .color(theme::TEXT_SECONDARY()),
                 );
@@ -286,13 +322,46 @@ fn render_match_focus(
         });
 }
 
-fn stat_card(ui: &mut Ui, label: &str, value: String, detail: &str, color: egui::Color32) {
+fn render_player_in_card(app: &TourviaApp, ui: &mut Ui, name: &str, player_id: &Option<String>, winner_id: &Option<String>, is_completed: bool) {
+    let mut color = theme::TEXT_PRIMARY();
+    
+    if is_completed {
+        if let (Some(pid), Some(wid)) = (player_id, winner_id) {
+            if pid == wid {
+                color = theme::ACCENT_BRONZE_LIGHT();
+            } else {
+                color = theme::TEXT_MUTED();
+            }
+        }
+    }
+
+    ui.horizontal(|ui| {
+        if let Some(pid) = player_id {
+            if let Some(tex) = app.logo_textures.get(pid) {
+                ui.add(egui::Image::new(tex).fit_to_exact_size(Vec2::new(18.0, 18.0)).corner_radius(2));
+            } else {
+                let (rect, _) = ui.allocate_exact_size(Vec2::new(18.0, 18.0), egui::Sense::hover());
+                ui.painter().rect_filled(rect, 2.0, ui.visuals().extreme_bg_color);
+                ui.painter().rect_stroke(rect, 2.0, Stroke::new(1.0, theme::ACCENT_BRONZE_LIGHT()), egui::StrokeKind::Inside);
+            }
+        }
+        ui.label(
+            RichText::new(player_name(name))
+                .size(16.0)
+                .color(color)
+                .strong(),
+        );
+    });
+}
+
+fn stat_card(ui: &mut Ui, label: &str, value: String, detail: &str, color: egui::Color32, progress: Option<f32>) {
     egui::Frame::new()
         .fill(theme::BG_PANEL())
         .stroke(theme::card_stroke())
         .corner_radius(theme::card_rounding())
         .inner_margin(egui::Margin::same(14))
         .show(ui, |ui| {
+            ui.set_width(ui.available_width());
             ui.set_min_height(72.0);
             ui.label(
                 RichText::new(label.to_uppercase())
@@ -307,6 +376,18 @@ fn stat_card(ui: &mut Ui, label: &str, value: String, detail: &str, color: egui:
                     .color(color)
                     .strong(),
             );
+            if let Some(p) = progress {
+                ui.add_space(4.0);
+                ui.add(
+                    egui::ProgressBar::new(p)
+                        .desired_width(ui.available_width())
+                        .desired_height(6.0)
+                        .fill(theme::ACCENT_BRONZE())
+                );
+            } else {
+                // Match the vertical space taken by the progress bar
+                ui.add_space(10.0 + ui.spacing().item_spacing.y);
+            }
             ui.add_space(2.0);
             ui.label(RichText::new(detail).size(12.0).color(theme::TEXT_SECONDARY()));
         });

@@ -260,9 +260,9 @@ fn render_round_robin_view(app: &mut TourviaApp, ui: &mut Ui) {
 
                                 // --- Center: Score / VS ---
                                 if m.status == MatchStatus::Completed {
-                                    painter.text(Pos2::new(center_cx, score_y), Align2::CENTER_CENTER, format!("{} - {}", m.score1, m.score2), FontId::new(18.0, FontFamily::Proportional), theme::TEXT_PRIMARY());
+                                    painter.text(Pos2::new(center_cx, score_y), Align2::CENTER_CENTER, format!("{} - {}", m.score1, m.score2), FontId::new(24.0, FontFamily::Name("Impact".into())), theme::TEXT_PRIMARY());
                                 } else {
-                                    painter.text(Pos2::new(center_cx, score_y), Align2::CENTER_CENTER, "VS", FontId::new(14.0, FontFamily::Proportional), theme::TEXT_MUTED());
+                                    painter.text(Pos2::new(center_cx, score_y), Align2::CENTER_CENTER, "VS", FontId::new(14.0, FontFamily::Name("Impact".into())), theme::TEXT_MUTED());
                                 }
 
                                 // --- Center: Status badge ---

@@ -21,10 +21,7 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
                         ui.add(egui::Image::new(egui::include_image!("../assets/logo.png")).max_height(36.0));
                         
                         ui.label(
-                            RichText::new("Tourvia")
-                                .font(egui::FontId::proportional(32.0))
-                                .color(theme::ACCENT_BRONZE())
-                                .strong(),
+                            theme::heading_text("TOURVIA").size(36.0)
                         );
                     });
                     ui.add_space(4.0);
@@ -367,7 +364,7 @@ fn stat_card(ui: &mut egui::Ui, label: &str, count: usize, color: egui::Color32)
             ui.label(
                 egui::RichText::new(count.to_string())
                     .color(color)
-                    .size(36.0)
+                    .font(egui::FontId::new(40.0, egui::FontFamily::Name("Impact".into())))
                     .strong(),
             );
         });
@@ -381,7 +378,7 @@ fn empty_state(ui: &mut Ui) {
     ui.vertical_centered(|ui| {
         ui.label(RichText::new("🏆").size(80.0).color(theme::ACCENT_BRONZE().linear_multiply(0.4)));
         ui.add_space(24.0);
-        ui.label(RichText::new("No Tournaments Yet").font(egui::FontId::proportional(24.0)).color(theme::TEXT_PRIMARY()).strong());
+        ui.label(theme::heading_text("NO TOURNAMENTS YET"));
         ui.add_space(12.0);
         ui.label(RichText::new("Create your first tournament to start managing brackets and participants.")
             .color(theme::TEXT_SECONDARY())

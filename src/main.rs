@@ -68,7 +68,7 @@ fn main() -> eframe::Result<()> {
             let mut fonts = egui::FontDefinitions::default();
             if let Ok(font_data) = std::fs::read("C:\\Windows\\Fonts\\impact.ttf") {
                 fonts.font_data.insert("Impact".to_owned(), std::sync::Arc::new(egui::FontData::from_owned(font_data)));
-                fonts.families.get_mut(&egui::FontFamily::Proportional).unwrap().insert(0, "Impact".to_owned());
+
                 fonts.families.insert(egui::FontFamily::Name("Impact".into()), vec!["Impact".to_owned()]);
             }
             cc.egui_ctx.set_fonts(fonts);

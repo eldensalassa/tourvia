@@ -69,20 +69,28 @@ impl<'a> Card<'a> {
             lerp_color(theme::BORDER_SUBTLE(), theme::BORDER_FOCUS(), hover_factor)
         };
         
-        let stroke_w = if self.is_selected { 1.5 } else { egui::lerp(1.0..=1.5, hover_factor) };
+        let stroke_w = if self.is_selected { 2.0 } else { egui::lerp(1.0..=2.0, hover_factor) };
         
-        // Shadow animation
-        let blur = egui::lerp(16.0..=24.0, hover_factor);
-        let offset_y = egui::lerp(4.0..=8.0, hover_factor);
+        // Shadow animation - neon glow effect for esports feel
+        let blur = egui::lerp(16.0..=32.0, hover_factor);
+        let offset_y = egui::lerp(4.0..=0.0, hover_factor); // Centered glow on hover
         let alpha = egui::lerp(
-            if theme::get_theme().mode == theme::ThemeMode::Dark { 140.0..=180.0 } else { 20.0..=40.0 }, 
+            if theme::get_theme().mode == theme::ThemeMode::Dark { 140.0..=200.0 } else { 20.0..=40.0 }, 
             hover_factor
         );
+        let shadow_color = if has_focus {
+            // Tint shadow with accent color for a subtle "neon glow"
+            let c = theme::ACCENT_BRONZE();
+            Color32::from_rgba_unmultiplied(c.r(), c.g(), c.b(), (alpha * 0.5) as u8)
+        } else {
+            Color32::from_black_alpha(alpha as u8)
+        };
+
         let shadow = egui::epaint::Shadow {
             offset: [0, offset_y as i8],
             blur: blur as u8,
-            spread: 0,
-            color: Color32::from_black_alpha(alpha as u8),
+            spread: if has_focus { 2 } else { 0 },
+            color: shadow_color,
         };
 
         ui.allocate_new_ui(egui::UiBuilder::new().max_rect(rect), |card_ui| {

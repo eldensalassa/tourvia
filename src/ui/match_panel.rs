@@ -174,9 +174,9 @@ pub fn render_modal(app: &mut TourviaApp, ctx: &egui::Context) {
                             if m.status == MatchStatus::Pending {
                                 ui.separator();
                                 ui.add_space(12.0);
-                                if ui.add(egui::Button::new(RichText::new("▶ Start Match").size(14.0).color(theme::BG_DARK()).strong())
+                                if ui.add(egui::Button::new(RichText::new("▶ START MATCH").font(egui::FontId::new(24.0, egui::FontFamily::Name("Impact".into()))).color(theme::BG_DARK()))
                                     .fill(theme::SUCCESS()).corner_radius(theme::button_rounding())
-                                    .min_size(Vec2::new(ui.available_width(), 40.0))).clicked() {
+                                    .min_size(Vec2::new(ui.available_width(), 48.0))).clicked() {
                                     app.start_match();
                                 }
                             } else if m.status == MatchStatus::InProgress {
@@ -245,9 +245,9 @@ pub fn render_modal(app: &mut TourviaApp, ctx: &egui::Context) {
 
                                 ui.add_space(16.0);
 
-                                if ui.add(egui::Button::new(RichText::new("⏹ End Match & Save Score").size(14.0).color(theme::BG_DARK()).strong())
-                                    .fill(theme::WARNING()).corner_radius(theme::button_rounding())
-                                    .min_size(Vec2::new(ui.available_width(), 40.0))).clicked() {
+                                if ui.add(egui::Button::new(RichText::new("⏹ END MATCH & SAVE").font(egui::FontId::new(24.0, egui::FontFamily::Name("Impact".into()))).color(theme::BG_DARK()))
+                                    .fill(theme::ERROR()).corner_radius(theme::button_rounding())
+                                    .min_size(Vec2::new(ui.available_width(), 48.0))).clicked() {
                                     app.end_match();
                                 }
                             }

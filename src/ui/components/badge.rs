@@ -40,7 +40,7 @@ impl Badge {
 
 impl Widget for Badge {
     fn ui(self, ui: &mut Ui) -> Response {
-        let text = RichText::new(self.text).size(11.0).color(self.text_color).strong();
+        let text = RichText::new(self.text.to_uppercase()).size(11.0).color(self.text_color).strong();
         let padding = egui::Margin::symmetric(10, 4);
         
         egui::Frame::new()

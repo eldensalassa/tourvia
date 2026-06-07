@@ -149,7 +149,7 @@ impl MatchRepository for Database {
         if slot == 1 {
             conn.execute(
                 "UPDATE matches SET player1_id = ?1, player1_name = ?2, status = CASE
-                    WHEN player2_id IS NOT NULL THEN 'In Progress'
+                    WHEN status = 'Pending' AND player2_id IS NOT NULL THEN 'In Progress'
                     ELSE status
                  END WHERE id = ?3",
                 params![player_id, player_name, match_id],
@@ -157,7 +157,7 @@ impl MatchRepository for Database {
         } else {
             conn.execute(
                 "UPDATE matches SET player2_id = ?1, player2_name = ?2, status = CASE
-                    WHEN player1_id IS NOT NULL THEN 'In Progress'
+                    WHEN status = 'Pending' AND player1_id IS NOT NULL THEN 'In Progress'
                     ELSE status
                  END WHERE id = ?3",
                 params![player_id, player_name, match_id],

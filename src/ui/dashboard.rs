@@ -150,8 +150,9 @@ fn render_content(app: &mut TourviaApp, ui: &mut Ui) {
     ui.horizontal(|ui| {
         let search_width = 360.0;
         let search_height = 38.0;
+        let input_fill = ui.visuals().extreme_bg_color;
         egui::Frame::new()
-            .fill(theme::BG_DARK())
+            .fill(input_fill)
             .stroke(Stroke::new(1.0, theme::BORDER_SUBTLE()))
             .corner_radius(4)
             .inner_margin(egui::Margin::symmetric(10, 4))
@@ -165,7 +166,7 @@ fn render_content(app: &mut TourviaApp, ui: &mut Ui) {
                         .desired_width(search_width - 44.0)
                         .font(egui::FontId::proportional(14.0))
                         .text_color(theme::TEXT_PRIMARY())
-                        .background_color(theme::BG_DARK())
+                        .background_color(input_fill)
                         .frame(false)
                         .margin(egui::Margin::symmetric(0, 0));
                     ui.add_sized(Vec2::new(search_width - 44.0, 24.0), search);

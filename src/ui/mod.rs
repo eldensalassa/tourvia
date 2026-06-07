@@ -1,5 +1,6 @@
 pub mod theme;
 pub mod dashboard;
+pub mod tournament_overview;
 pub mod tournament_form;
 pub mod participant_panel;
 pub mod bracket_view;

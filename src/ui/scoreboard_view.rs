@@ -1,4 +1,4 @@
-use egui::{self, Align, Color32, FontFamily, FontId, RichText, Stroke, Vec2};
+use egui::{self, Align, FontFamily, FontId, RichText, Stroke, Vec2};
 
 use crate::app::TourviaApp;
 use crate::domain::match_model::{Match, MatchStatus};
@@ -88,6 +88,7 @@ pub fn render_display_window(app: &mut TourviaApp, ctx: &egui::Context) {
 
 fn render_top_bar(app: &mut TourviaApp, ui: &mut egui::Ui) {
     ui.horizontal(|ui| {
+        let input_fill = ui.visuals().extreme_bg_color;
         if ui
             .add(
                 egui::Button::new(
@@ -95,7 +96,7 @@ fn render_top_bar(app: &mut TourviaApp, ui: &mut egui::Ui) {
                         .size(13.0)
                         .color(theme::TEXT_SECONDARY()),
                 )
-                .fill(Color32::TRANSPARENT),
+                .fill(input_fill),
             )
             .clicked()
         {

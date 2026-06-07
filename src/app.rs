@@ -840,7 +840,8 @@ impl eframe::App for TourviaApp {
                         
                         // Top line: Back button, Title, Actions
                         ui.horizontal(|ui| {
-                            if ui.add(egui::Button::new(egui::RichText::new("< Dashboard").color(ui::theme::TEXT_MUTED()).size(13.0)).fill(egui::Color32::TRANSPARENT)).clicked() {
+                            let input_fill = ui.visuals().extreme_bg_color;
+                            if ui.add(egui::Button::new(egui::RichText::new("< Dashboard").color(ui::theme::TEXT_MUTED()).size(13.0)).fill(input_fill)).clicked() {
                                 self.go_to_dashboard();
                                 return;
                             }
@@ -871,7 +872,7 @@ impl eframe::App for TourviaApp {
 
                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                                 if !self.matches.is_empty() {
-                                    if ui.add(egui::Button::new(egui::RichText::new("Scoreboard").size(12.0).color(ui::theme::TEXT_PRIMARY())).fill(ui::theme::ACCENT_BRONZE())).clicked() {
+                                    if ui.add(egui::Button::new(egui::RichText::new("Scoreboard").size(12.0).color(ui::theme::BG_DARK())).fill(ui::theme::ACCENT_BRONZE())).clicked() {
                                         self.open_scoreboard();
                                     }
                                     let display_label = if self.scoreboard_display_window_open {
@@ -898,8 +899,9 @@ impl eframe::App for TourviaApp {
                         ui.add_space(16.0);
 
                         // Horizontal Tabs (Segmented Control Style)
+                        let tab_fill = ui.visuals().extreme_bg_color;
                         egui::Frame::new()
-                            .fill(ui::theme::BG_DARK())
+                            .fill(ui::theme::BG_CARD())
                             .corner_radius(ui::theme::badge_rounding())
                             .inner_margin(egui::Margin::symmetric(6, 6))
                             .show(ui, |ui| {
@@ -914,10 +916,10 @@ impl eframe::App for TourviaApp {
                                     for (tab, label) in tabs {
                                         let is_active = self.active_tab == tab;
                                         
-                                        let (bg_color, text_color) = if is_active {
-                                            (ui::theme::BG_ELEVATED(), ui::theme::ACCENT_BRONZE())
+                                        let (text_color, stroke_color, stroke_width) = if is_active {
+                                            (ui::theme::ACCENT_BRONZE(), ui::theme::ACCENT_BRONZE(), 1.5)
                                         } else {
-                                            (egui::Color32::TRANSPARENT, ui::theme::TEXT_MUTED())
+                                            (ui::theme::TEXT_SECONDARY(), ui::theme::BORDER_SUBTLE(), 1.0)
                                         };
 
                                         let text = egui::RichText::new(label)
@@ -926,8 +928,8 @@ impl eframe::App for TourviaApp {
                                             .strong();
                                         
                                         let btn = egui::Button::new(text)
-                                            .fill(bg_color)
-                                            .stroke(egui::Stroke::NONE)
+                                            .fill(tab_fill)
+                                            .stroke(egui::Stroke::new(stroke_width, stroke_color))
                                             .corner_radius(ui::theme::badge_rounding())
                                             .min_size(egui::Vec2::new(120.0, 36.0));
                                         
@@ -945,17 +947,7 @@ impl eframe::App for TourviaApp {
                     .show(ctx, |ui| {
                         match self.active_tab {
                             TournamentTab::Overview => {
-                                // Simple overview
-                                if let Some(ref t) = self.active_tournament {
-                                    ui.label(ui::theme::subheading_text("Game"));
-                                    ui.label(ui::theme::body_text(if t.game_name.is_empty() { "Not specified" } else { &t.game_name }));
-                                    ui.add_space(16.0);
-                                    ui.label(ui::theme::subheading_text("Format"));
-                                    ui.label(ui::theme::body_text(t.tournament_type.as_str()));
-                                    ui.add_space(16.0);
-                                    ui.label(ui::theme::subheading_text("Description"));
-                                    ui.label(ui::theme::body_text(if t.description.is_empty() { "No description" } else { &t.description }));
-                                }
+                                ui::tournament_overview::render(self, ui);
                             }
                             TournamentTab::Participants => {
                                 ui::participant_panel::render(self, ui, &ctx_clone);

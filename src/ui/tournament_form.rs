@@ -10,9 +10,10 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
 
     // Header with back button
     ui.horizontal(|ui| {
+        let input_fill = ui.visuals().extreme_bg_color;
         if ui.add(
             egui::Button::new(RichText::new("< Back").color(theme::TEXT_SECONDARY()).size(14.0))
-                .fill(Color32::TRANSPARENT),
+                .fill(input_fill),
         ).clicked() {
             app.go_to_dashboard();
         }
@@ -41,8 +42,9 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
                 // ─── Tournament Name ────────────────
                 ui.label(theme::section_header("TOURNAMENT NAME"));
                 ui.add_space(4.0);
+                let input_fill = ui.visuals().extreme_bg_color;
                 let name_resp = egui::Frame::new()
-                    .fill(theme::BG_DARK())
+                    .fill(input_fill)
                     .stroke(Stroke::new(1.0, theme::BORDER_SUBTLE()))
                     .corner_radius(4)
                     .inner_margin(egui::Margin::symmetric(10, 4))
@@ -52,7 +54,7 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
                             .desired_width(f32::INFINITY)
                             .font(egui::FontId::proportional(15.0))
                             .text_color(theme::TEXT_PRIMARY())
-                            .background_color(theme::BG_DARK())
+                            .background_color(input_fill)
                             .frame(false)
                             .margin(egui::Margin::symmetric(0, 4));
                         ui.add_sized(Vec2::new(ui.available_width(), 30.0), name_edit)
@@ -74,7 +76,7 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
                     if app.new_tournament_game.is_empty() {
                         app.new_tournament_game = app.global_games[0].name.clone();
                     }
-                    let input_fill = theme::BG_DARK();
+                    let input_fill = ui.visuals().extreme_bg_color;
                     let field_width = ui.available_width();
                     ui.scope(|ui| {
                         let stroke = Stroke::new(1.0, theme::BORDER_SUBTLE());

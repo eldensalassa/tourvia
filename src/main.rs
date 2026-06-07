@@ -43,8 +43,8 @@ fn main() -> eframe::Result<()> {
 
     // Configure window
     let mut viewport = egui::ViewportBuilder::default()
-        .with_title("Tourvia — Tournament Visualization & Administration")
-        .with_inner_size([1280.0, 800.0])
+        .with_title("Tourvia")
+        .with_inner_size([1000.0, 650.0])
         .with_min_inner_size([900.0, 600.0]);
 
     if let Some(icon) = load_icon() {

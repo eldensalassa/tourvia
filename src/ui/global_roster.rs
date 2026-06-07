@@ -192,9 +192,10 @@ fn render_list(app: &mut TourviaApp, ui: &mut egui::Ui) {
             ui.horizontal(|ui| {
                 ui.label(theme::heading_text("Database Repository").size(24.0));
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    let input_fill = ui.visuals().extreme_bg_color;
                     if ui.add(
                         egui::Button::new(RichText::new("⬅ Back to Dashboard").color(theme::TEXT_PRIMARY()))
-                            .fill(theme::BG_CARD_HOVER())
+                            .fill(input_fill)
                             .corner_radius(theme::button_rounding())
                             .min_size(Vec2::new(140.0, 36.0))
                     ).clicked() {
@@ -338,8 +339,9 @@ fn render_detail(app: &mut TourviaApp, ui: &mut egui::Ui) {
         .max_width(320.0)
         .show_inside(ui, |ui| {
             // BACK BUTTON
+            let input_fill = ui.visuals().extreme_bg_color;
             if ui.add(egui::Button::new(RichText::new("⬅ Back to Database").color(theme::TEXT_PRIMARY()))
-                .fill(theme::BG_CARD_HOVER())
+                .fill(input_fill)
                 .corner_radius(theme::button_rounding())
             ).clicked() {
                 app.close_roster();

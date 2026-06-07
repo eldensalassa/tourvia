@@ -73,6 +73,7 @@ pub struct TourviaApp {
     pub rounds: Vec<Round>,
     pub matches: Vec<Match>,
     pub selected_match: Option<String>,
+    pub scoreboard_display_window_open: bool,
     pub champion: Option<(String, String)>,
 
     // Form state
@@ -171,6 +172,7 @@ impl TourviaApp {
             rounds: Vec::new(),
             matches: Vec::new(),
             selected_match: None,
+            scoreboard_display_window_open: false,
             champion: None,
             new_tournament_name: String::new(),
             new_tournament_type: TournamentType::SingleElimination,
@@ -284,6 +286,7 @@ impl TourviaApp {
     pub fn go_to_dashboard(&mut self) {
         self.current_view = View::Dashboard;
         self.active_tournament = None;
+        self.scoreboard_display_window_open = false;
         
         self.confirm_delete = None;
         self.refresh_tournaments();
@@ -306,12 +309,19 @@ impl TourviaApp {
             self.active_tab = TournamentTab::Overview;
             
             self.selected_match = None;
+            self.scoreboard_display_window_open = false;
             self.show_match_modal = false;
             self.score_input = [String::new(), String::new()];
             self.bracket_zoom = 1.0;
             self.participant_preview_roster = None;
             self.participant_preview_members.clear();
             self.load_tournament_data(&tournament.id);
+        }
+    }
+
+    pub fn toggle_scoreboard_display_window(&mut self) {
+        if self.active_tournament.is_some() && !self.matches.is_empty() {
+            self.scoreboard_display_window_open = !self.scoreboard_display_window_open;
         }
     }
 
@@ -806,7 +816,8 @@ impl eframe::App for TourviaApp {
                         
                         // Top line: Back button, Title, Actions
                         ui.horizontal(|ui| {
-                            if ui.add(egui::Button::new(egui::RichText::new("⬅ Dashboard").color(ui::theme::TEXT_MUTED()).size(13.0)).fill(egui::Color32::TRANSPARENT)).clicked() {
+                            let input_fill = ui.visuals().extreme_bg_color;
+                            if ui.add(egui::Button::new(egui::RichText::new("< Dashboard").color(ui::theme::TEXT_MUTED()).size(13.0)).fill(input_fill)).clicked() {
                                 self.go_to_dashboard();
                                 return;
                             }
@@ -836,11 +847,11 @@ impl eframe::App for TourviaApp {
                             }
 
                             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                if ui.add(egui::Button::new(egui::RichText::new("📤 Export JSON").size(12.0).color(ui::theme::TEXT_SECONDARY())).fill(ui::theme::BG_CARD())).clicked() {
+                                if ui.add(egui::Button::new(egui::RichText::new("Export JSON").size(12.0).color(ui::theme::TEXT_SECONDARY())).fill(ui::theme::BG_CARD())).clicked() {
                                     self.export_json();
                                 }
                                 if !self.is_draft() {
-                                    if ui.add(egui::Button::new(egui::RichText::new("🔄 Reset").size(12.0).color(ui::theme::WARNING())).fill(ui::theme::BG_CARD())).clicked() {
+                                    if ui.add(egui::Button::new(egui::RichText::new("Reset").size(12.0).color(ui::theme::WARNING())).fill(ui::theme::BG_CARD())).clicked() {
                                         self.reset_bracket();
                                     }
                                 }
@@ -850,8 +861,9 @@ impl eframe::App for TourviaApp {
                         ui.add_space(16.0);
 
                         // Horizontal Tabs (Segmented Control Style)
+                        let tab_fill = ui.visuals().extreme_bg_color;
                         egui::Frame::new()
-                            .fill(ui::theme::BG_DARK())
+                            .fill(ui::theme::BG_CARD())
                             .corner_radius(ui::theme::badge_rounding())
                             .inner_margin(egui::Margin::symmetric(6, 6))
                             .show(ui, |ui| {
@@ -866,10 +878,10 @@ impl eframe::App for TourviaApp {
                                     for (tab, label) in tabs {
                                         let is_active = self.active_tab == tab;
                                         
-                                        let (bg_color, text_color) = if is_active {
-                                            (ui::theme::BG_ELEVATED(), ui::theme::ACCENT_BRONZE())
+                                        let (text_color, stroke_color, stroke_width) = if is_active {
+                                            (ui::theme::ACCENT_BRONZE(), ui::theme::ACCENT_BRONZE(), 1.5)
                                         } else {
-                                            (egui::Color32::TRANSPARENT, ui::theme::TEXT_MUTED())
+                                            (ui::theme::TEXT_SECONDARY(), ui::theme::BORDER_SUBTLE(), 1.0)
                                         };
 
                                         let text = egui::RichText::new(label)
@@ -878,8 +890,8 @@ impl eframe::App for TourviaApp {
                                             .strong();
                                         
                                         let btn = egui::Button::new(text)
-                                            .fill(bg_color)
-                                            .stroke(egui::Stroke::NONE)
+                                            .fill(tab_fill)
+                                            .stroke(egui::Stroke::new(stroke_width, stroke_color))
                                             .corner_radius(ui::theme::badge_rounding())
                                             .min_size(egui::Vec2::new(120.0, 36.0));
                                         
@@ -897,17 +909,7 @@ impl eframe::App for TourviaApp {
                     .show(ctx, |ui| {
                         match self.active_tab {
                             TournamentTab::Overview => {
-                                // Simple overview
-                                if let Some(ref t) = self.active_tournament {
-                                    ui.label(ui::theme::subheading_text("Game"));
-                                    ui.label(ui::theme::body_text(if t.game_name.is_empty() { "Not specified" } else { &t.game_name }));
-                                    ui.add_space(16.0);
-                                    ui.label(ui::theme::subheading_text("Format"));
-                                    ui.label(ui::theme::body_text(t.tournament_type.as_str()));
-                                    ui.add_space(16.0);
-                                    ui.label(ui::theme::subheading_text("Description"));
-                                    ui.label(ui::theme::body_text(if t.description.is_empty() { "No description" } else { &t.description }));
-                                }
+                                ui::tournament_overview::render(self, ui);
                             }
                             TournamentTab::Participants => {
                                 ui::participant_panel::render(self, ui, &ctx_clone);
@@ -928,6 +930,16 @@ impl eframe::App for TourviaApp {
                 
                 // Participant Preview Modal
                 ui::participant_panel::render_preview_modal(self, ctx);
+            }
+        }
+
+        if self.scoreboard_display_window_open {
+            if self.active_tournament.is_some() {
+                self.ensure_logos_loaded(ctx);
+                self.ensure_tournament_logos_loaded(ctx);
+                crate::ui::scoreboard_view::render_display_window(self, ctx);
+            } else {
+                self.scoreboard_display_window_open = false;
             }
         }
         

@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="src/assets/logo.png" alt="Tourvia Logo" width="120" />
+  <img src="src/assets/logos/logo.png" alt="Tourvia Logo" width="120" />
   <h1>Tourvia</h1>
   <p><strong>Tournament Visualization and Administration System</strong></p>
   <p>A fast, native desktop application for esports and sports tournament management, built with Rust and egui.</p>

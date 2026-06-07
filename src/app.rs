@@ -36,6 +36,12 @@ pub enum TournamentTab {
     Standings,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum BroadcastMode {
+    Scoreboard,
+    Bracket,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum ImageTarget {
     NewRosterLogo,
@@ -134,6 +140,13 @@ pub struct TourviaApp {
     // Participant Preview
     pub participant_preview_roster: Option<crate::domain::roster::Roster>,
     pub participant_preview_members: Vec<crate::domain::roster::RosterMember>,
+
+    // Broadcast Overlay
+    pub show_broadcast_window: bool,
+    pub broadcast_mode: BroadcastMode,
+    pub broadcast_timer_running: bool,
+    pub broadcast_timer_seconds: u64,
+    pub broadcast_timer_last_tick: Option<std::time::Instant>,
 }
 
 impl TourviaApp {
@@ -202,6 +215,11 @@ impl TourviaApp {
             thumbnail_fetch_rx: None,
             participant_preview_roster: None,
             participant_preview_members: Vec::new(),
+            show_broadcast_window: false,
+            broadcast_mode: BroadcastMode::Scoreboard,
+            broadcast_timer_running: false,
+            broadcast_timer_seconds: 0,
+            broadcast_timer_last_tick: None,
         };
         app.load_games();
         app.load_rosters();
@@ -679,28 +697,44 @@ impl TourviaApp {
 
     pub fn select_match(&mut self, match_id: &str) {
         self.selected_match = Some(match_id.to_string());
-        self.score_input = [String::new(), String::new()];
-        
         self.show_match_modal = true; // Open modal
     }
 
-    pub fn submit_match_score(&mut self) {
+    pub fn start_match(&mut self) {
+        let match_id = match &self.selected_match { Some(id) => id.clone(), None => return };
+        
+        let mut score1 = 0;
+        let mut score2 = 0;
+        
+        // Find the match in memory and update its status
+        if let Some(m) = self.matches.iter_mut().find(|m| m.id == match_id) {
+            m.status = crate::domain::match_model::MatchStatus::InProgress;
+            score1 = m.score1;
+            score2 = m.score2;
+        }
+        
+        // Save status to DB so it persists
+        use crate::domain::repositories::MatchRepository;
+        let _ = self.db.update_match_score(&match_id, score1, score2, &crate::domain::match_model::MatchStatus::InProgress, None);
+    }
+
+    pub fn update_live_score(&mut self, p1_delta: i32, p2_delta: i32) {
+        let match_id = match &self.selected_match { Some(id) => id.clone(), None => return };
+        
+        // Update score purely in memory for Live Overlay
+        if let Some(m) = self.matches.iter_mut().find(|m| m.id == match_id) {
+            m.score1 = (m.score1 + p1_delta).max(0);
+            m.score2 = (m.score2 + p2_delta).max(0);
+        }
+    }
+
+    pub fn end_match(&mut self) {
         let match_id = match &self.selected_match { Some(id) => id.clone(), None => return };
 
-        let s1: i32 = match self.score_input[0].trim().parse() {
-            Ok(v) => v,
-            Err(_) => {
-                self.notifications.error("Invalid score for Player 1.");
-                return;
-            }
-        };
-
-        let s2: i32 = match self.score_input[1].trim().parse() {
-            Ok(v) => v,
-            Err(_) => {
-                self.notifications.error("Invalid score for Player 2.");
-                return;
-            }
+        let (s1, s2) = if let Some(m) = self.matches.iter().find(|m| m.id == match_id) {
+            (m.score1, m.score2)
+        } else {
+            return;
         };
 
         match self.services.match_service.submit_score(&match_id, s1, s2) {
@@ -715,9 +749,9 @@ impl TourviaApp {
                         self.refresh_tournaments();
                     }
                 }
-                self.notifications.success("Score submitted!");
-                self.score_input = [String::new(), String::new()];
+                self.notifications.success("Match Ended! Score Saved.");
                 self.show_match_modal = false; // Close modal on success
+                self.show_broadcast_window = false; // Auto close broadcast window
             }
             Err(e) => {
                 self.notifications.error(e);
@@ -746,6 +780,21 @@ impl eframe::App for TourviaApp {
         if !self.theme_applied {
             ui::theme::apply_theme(ctx);
             self.theme_applied = true;
+        }
+
+        if self.broadcast_timer_running {
+            if let Some(last_tick) = self.broadcast_timer_last_tick {
+                let elapsed = last_tick.elapsed().as_secs();
+                if elapsed >= 1 {
+                    self.broadcast_timer_seconds += elapsed;
+                    self.broadcast_timer_last_tick = Some(std::time::Instant::now());
+                }
+            } else {
+                self.broadcast_timer_last_tick = Some(std::time::Instant::now());
+            }
+            ctx.request_repaint();
+        } else {
+            self.broadcast_timer_last_tick = None;
         }
 
         match self.current_view {
@@ -782,7 +831,11 @@ impl eframe::App for TourviaApp {
 
                 // Top bar with Title & Tabs
                 egui::TopBottomPanel::top("top_nav")
-                    .frame(egui::Frame::new().fill(ui::theme::BG_PANEL()).inner_margin(egui::Margin::symmetric(24, 16)))
+                    .frame(egui::Frame::new()
+                        .fill(ui::theme::BG_PANEL())
+                        .inner_margin(egui::Margin::symmetric(32, 24))
+                        .shadow(ui::theme::card_shadow())
+                    )
                     .show(ctx, |ui| {
                         
                         // Top line: Back button, Title, Actions
@@ -846,9 +899,9 @@ impl eframe::App for TourviaApp {
 
                         // Horizontal Tabs (Segmented Control Style)
                         egui::Frame::new()
-                            .fill(ui::theme::BG_CARD())
-                            .corner_radius(ui::theme::button_rounding())
-                            .inner_margin(egui::Margin::same(4))
+                            .fill(ui::theme::BG_DARK())
+                            .corner_radius(ui::theme::badge_rounding())
+                            .inner_margin(egui::Margin::symmetric(6, 6))
                             .show(ui, |ui| {
                                 ui.horizontal(|ui| {
                                     let tabs = [
@@ -875,7 +928,7 @@ impl eframe::App for TourviaApp {
                                         let btn = egui::Button::new(text)
                                             .fill(bg_color)
                                             .stroke(egui::Stroke::NONE)
-                                            .corner_radius(ui::theme::button_rounding())
+                                            .corner_radius(ui::theme::badge_rounding())
                                             .min_size(egui::Vec2::new(120.0, 36.0));
                                         
                                         if ui.add(btn).clicked() {
@@ -940,5 +993,30 @@ impl eframe::App for TourviaApp {
         ui::image_picker::render_modal(self, ctx);
         
         self.notifications.render(ctx);
+
+        if self.show_broadcast_window {
+            let viewport_builder = egui::ViewportBuilder::default()
+                .with_title("Tourvia Broadcast Overlay")
+                .with_transparent(true) // Set back to true to avoid WGPU Access Violation Crash on multi-viewports
+                .with_decorations(false)
+                .with_taskbar(true) // So OBS doesn't skip it
+                .with_inner_size([800.0, 160.0]);
+            
+            ctx.show_viewport_immediate(
+                egui::ViewportId::from_hash_of("broadcast_overlay"),
+                viewport_builder,
+                |viewport_ctx, _class| {
+                    egui::CentralPanel::default()
+                        .frame(egui::Frame::NONE.fill(egui::Color32::from_rgb(0, 255, 0))) // CHROMA KEY GREEN
+                        .show(viewport_ctx, |ui| {
+                            crate::ui::broadcast_overlay::render_overlay(self, ui);
+                        });
+                },
+            );
+            
+            // Critical: Immediate viewports will close if the main window goes to sleep (stops repainting).
+            // We must force continuous repaints as long as the broadcast window is intended to be open!
+            ctx.request_repaint();
+        }
     }
 }

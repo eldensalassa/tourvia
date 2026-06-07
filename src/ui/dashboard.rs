@@ -34,12 +34,7 @@ fn render_content(app: &mut TourviaApp, ui: &mut Ui) {
                         // Add application logo next to the title
                         ui.add(egui::Image::new(egui::include_image!("../assets/logo.png")).max_height(32.0));
                         
-                        ui.label(
-                            RichText::new("Tourvia")
-                                .font(egui::FontId::proportional(28.0))
-                                .color(theme::ACCENT_BRONZE())
-                                .strong(),
-                        );
+                        ui.label(theme::heading_text("TOURVIA").size(36.0));
                     });
                     ui.add_space(4.0);
                     ui.label(theme::body_text(
@@ -245,17 +240,13 @@ fn render_content(app: &mut TourviaApp, ui: &mut Ui) {
                         let idx = *idx;
 
                         let card_size = Vec2::new(card_width, 160.0);
-                        ui.allocate_ui(card_size, |ui| {
-                            egui::Frame::new()
-                                .fill(theme::BG_CARD())
-                                .stroke(Stroke::new(1.0, theme::BORDER_SUBTLE()))
-                                .corner_radius(theme::card_rounding())
-                                .inner_margin(egui::Margin::same(16))
-                                .show(ui, |ui| {
-                                    ui.set_min_size(Vec2::new(card_width - 32.0, 160.0 - 32.0));
-                                    ui.set_max_size(Vec2::new(card_width - 32.0, 160.0 - 32.0));
+                        use crate::ui::components::card::Card;
+                        
+                        Card::new(card_size, |ui| {
+                            ui.set_min_size(Vec2::new(card_width - 32.0, 160.0 - 32.0));
+                            ui.set_max_size(Vec2::new(card_width - 32.0, 160.0 - 32.0));
 
-                                    ui.vertical(|ui| {
+                            ui.vertical(|ui| {
                                         // Top row: Logo + Details
                                         ui.horizontal(|ui| {
                                             // Logo
@@ -299,29 +290,13 @@ fn render_content(app: &mut TourviaApp, ui: &mut Ui) {
                                                 ui.add_space(2.0);
 
                                                 // Status badge
-                                                let (status_color, status_text) = match tournament.status {
-                                                    crate::domain::tournament::TournamentStatus::Draft => {
-                                                        (theme::TEXT_MUTED(), "📝 Draft")
-                                                    }
-                                                    crate::domain::tournament::TournamentStatus::InProgress => {
-                                                        (theme::ACCENT_BRONZE(), "▶ In Progress")
-                                                    }
-                                                    crate::domain::tournament::TournamentStatus::Completed => {
-                                                        (theme::SUCCESS(), "✅ Completed")
-                                                    }
+                                                use crate::ui::components::badge::Badge;
+                                                let badge = match tournament.status {
+                                                    crate::domain::tournament::TournamentStatus::Draft => Badge::neutral("📝 Draft"),
+                                                    crate::domain::tournament::TournamentStatus::InProgress => Badge::warning("▶ In Progress"),
+                                                    crate::domain::tournament::TournamentStatus::Completed => Badge::success("✅ Completed"),
                                                 };
-
-                                                ui.add(
-                                                    egui::Button::new(
-                                                        RichText::new(status_text)
-                                                            .size(10.0)
-                                                            .color(status_color),
-                                                    )
-                                                    .fill(Color32::TRANSPARENT)
-                                                    .stroke(Stroke::new(1.0, status_color))
-                                                    .corner_radius(12)
-                                                    .min_size(Vec2::new(0.0, 20.0)),
-                                                );
+                                                ui.add(badge);
                                             });
                                         });
 
@@ -395,48 +370,52 @@ fn render_content(app: &mut TourviaApp, ui: &mut Ui) {
                                             }
                                         });
                                     });
-                                });
-                        });
+                        })
+                        .non_interactive()
+                        .accessibility_label(format!("Tournament {}", tournament.name))
+                        .show(ui);
                     }
                 });
             });
     });
 }
 
-fn stat_card(ui: &mut Ui, label: &str, count: usize, color: Color32) {
-    egui::Frame::NONE
-        .fill(theme::BG_CARD())
-        .corner_radius(theme::card_rounding())
-        .stroke(Stroke::new(1.0, theme::BORDER_SUBTLE()))
-        .inner_margin(egui::Margin::same(12))
-        .show(ui, |ui| {
-            ui.set_width(ui.available_width());
-            ui.vertical(|ui| {
-                ui.label(RichText::new(label).color(theme::TEXT_MUTED()).size(12.0));
-                ui.add_space(4.0);
-                ui.label(
-                    RichText::new(count.to_string())
-                        .color(color)
-                        .size(28.0)
-                        .strong(),
-                );
-            });
+fn stat_card(ui: &mut egui::Ui, label: &str, count: usize, color: egui::Color32) {
+    let width = ui.available_width();
+    let height = 90.0;
+    
+    use crate::ui::components::card::Card;
+
+    Card::new(egui::Vec2::new(width, height), |ui| {
+        ui.set_width(ui.available_width());
+        ui.vertical(|ui| {
+            ui.label(egui::RichText::new(label).color(crate::ui::theme::TEXT_MUTED()).size(14.0).strong());
+            ui.add_space(8.0);
+            ui.label(
+                egui::RichText::new(count.to_string())
+                    .color(color)
+                    .font(egui::FontId::new(40.0, egui::FontFamily::Name("Impact".into())))
+                    .strong(),
+            );
         });
+    })
+    .accessibility_label(format!("Stat Card: {}, {}", label, count))
+    .show(ui);
 }
 
 fn empty_state(ui: &mut Ui) {
     ui.add_space(48.0);
     ui.vertical_centered(|ui| {
-        ui.label(RichText::new("🎮").size(72.0));
-        ui.add_space(16.0);
-        ui.label(theme::subheading_text("No Tournaments Yet"));
-        ui.add_space(8.0);
-        ui.label(theme::label_text(
-            "Create your first tournament to get started!",
-        ));
-        ui.add_space(4.0);
+        ui.label(RichText::new("🏆").size(80.0).color(theme::ACCENT_BRONZE().linear_multiply(0.4)));
+        ui.add_space(24.0);
+        ui.label(theme::heading_text("NO TOURNAMENTS YET"));
+        ui.add_space(12.0);
+        ui.label(RichText::new("Create your first tournament to start managing brackets and participants.")
+            .color(theme::TEXT_SECONDARY())
+            .size(15.0));
+        ui.add_space(6.0);
         ui.label(theme::small_text(
-            "Click the '+ New Tournament' button above",
+            "Click the '+ New Tournament' button above to get started."
         ));
     });
 }

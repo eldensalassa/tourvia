@@ -29,8 +29,17 @@ fn main() -> eframe::Result<()> {
     // Initialize logger
     env_logger::init();
 
+    // Determine safe data directory
+    let db_path = if let Some(proj_dirs) = directories::ProjectDirs::from("", "", "Tourvia") {
+        let data_dir = proj_dirs.data_dir();
+        std::fs::create_dir_all(data_dir).unwrap_or_default();
+        data_dir.join("tourvia.db")
+    } else {
+        std::path::PathBuf::from("tourvia.db")
+    };
+
     // Open database
-    let db = Database::open("tourvia.db").expect("Failed to open database");
+    let db = Database::open(db_path.to_str().unwrap()).expect("Failed to open database");
 
     // Configure window
     let mut viewport = egui::ViewportBuilder::default()
@@ -54,6 +63,14 @@ fn main() -> eframe::Result<()> {
         Box::new(|cc| {
             // Install image loaders for egui to load textures
             egui_extras::install_image_loaders(&cc.egui_ctx);
+            
+            // Bundle the cross-platform open-source Anton font (Impact alternative)
+            let mut fonts = egui::FontDefinitions::default();
+            let font_data = include_bytes!("assets/Anton-Regular.ttf");
+            fonts.font_data.insert("Impact".to_owned(), std::sync::Arc::new(egui::FontData::from_static(font_data)));
+            fonts.families.insert(egui::FontFamily::Name("Impact".into()), vec!["Impact".to_owned()]);
+            cc.egui_ctx.set_fonts(fonts);
+            
             let mut app = TourviaApp::new(db);
             app.refresh_tournaments();
             app.load_rosters();

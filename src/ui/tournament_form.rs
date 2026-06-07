@@ -169,7 +169,14 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
                             app.new_tournament_logo = None;
                         }
                     } else {
-                        if ui.add(egui::Button::new("Browse Image").fill(theme::BG_ELEVATED())).clicked() {
+                        let btn = egui::Button::new(
+                            RichText::new("📁 Browse Image").color(theme::TEXT_PRIMARY()).size(13.0)
+                        )
+                        .fill(theme::BG_CARD_HOVER())
+                        .stroke(egui::Stroke::new(1.0, theme::BORDER_SUBTLE()))
+                        .corner_radius(theme::button_rounding())
+                        .min_size(Vec2::new(120.0, 30.0));
+                        if ui.add(btn).clicked() {
                             app.image_picker_open = true;
                             app.image_picker_target = Some(crate::app::ImageTarget::NewTournamentLogo);
                         }
@@ -195,10 +202,16 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
                 ui.label(theme::section_header("TOURNAMENT FORMAT"));
                 ui.add_space(6.0);
 
-                ui.horizontal_wrapped(|ui| {
-                    type_button(ui, app, TournamentType::SingleElimination, "Single Elimination", theme::ACCENT_BRONZE());
-                    type_button(ui, app, TournamentType::DoubleElimination, "Double Elimination", theme::ACCENT_BRONZE_LIGHT());
-                    type_button(ui, app, TournamentType::RoundRobin, "Round Robin", theme::ACCENT_BRONZE_DARK());
+                ui.columns(3, |columns| {
+                    columns[0].vertical_centered_justified(|ui| {
+                        type_button(ui, app, TournamentType::SingleElimination, "Single Elim", theme::ACCENT_BRONZE());
+                    });
+                    columns[1].vertical_centered_justified(|ui| {
+                        type_button(ui, app, TournamentType::DoubleElimination, "Double Elim", theme::ACCENT_BRONZE_LIGHT());
+                    });
+                    columns[2].vertical_centered_justified(|ui| {
+                        type_button(ui, app, TournamentType::RoundRobin, "Round Robin", theme::ACCENT_BRONZE_DARK());
+                    });
                 });
 
                 ui.add_space(6.0);

@@ -17,10 +17,11 @@ Tourvia is a *Native Desktop* application developed using the **Rust** programmi
 
 - **🏆 Smart Bracket System**: Fully supports **Single Elimination**. **Double Elimination** (with Upper/Lower Brackets) and **Round Robin** formats. Automatically routes match winners, losers, and calculates *BYE* scenarios.
 - **👥 Global Roster & Team Management**: Register teams once in the *Global Roster* system and reuse them across multiple tournaments. Full support for uploading high-resolution team logos (PNG/JPG).
+- **🌐 Built-in Web Image Scraper**: No need to download logos manually! Tourvia includes an integrated image search scraper to directly find and apply team logos from the web straight into your roster.
 - **📊 Real-time Standings & Statistics**: Automatically calculates standings for the *Round Robin* format (Wins, Losses, Game Differentials). Interactive dashboard displays win ratios and total matches.
 - **📸 High-Quality Bracket Export**: Share your tournament results! Export your giant tournament brackets into high-resolution PNG image formats with just a single click.
 - **🔍 Pan & Zoom Navigation**: The diagram area (*Bracket*) is equipped with free-pan navigation and *zoom-in / zoom-out* controls to easily traverse large-scale tournament brackets.
-- **💾 Robust Local Database**: All data is securely stored using a local SQLite database (`tourvia.db`), ensuring your data remains intact even after the application is closed.
+- **💾 Secure Local Database**: All data is securely stored using a local SQLite database (`tourvia.db`). The database is natively stored in your OS's safe AppData/Local directory (e.g. `AppData/Roaming/Tourvia/data/` on Windows) ensuring data persistence.
 - **🎨 Modern Theme**: Elegantly polished UI/UX featuring a "Refined Bronze & Dark Zinc" color palette for a professional administrative experience.
 
 ## 🛠️ System Prerequisites
@@ -30,6 +31,9 @@ Because this application is compiled natively, you need the Rust toolchain insta
 1. **Rust & Cargo**: Download and install via [rustup.rs](https://rustup.rs/).
 2. **Compatible OS**: Windows, macOS, or Linux with standard *Graphics API* support (Vulkan, DirectX, Metal, or OpenGL).
 
+## 📦 Pre-built Binaries (Easiest Method)
+
+Don't want to compile from source? You can download the pre-compiled, ready-to-run binaries for your operating system directly from the **[GitHub Releases](../../releases)** page.
 ## 📥 Installation and Compilation
 
 1. Open your Terminal or Command Prompt, then clone and navigate into this project directory.

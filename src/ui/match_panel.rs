@@ -24,7 +24,7 @@ pub fn render_modal(app: &mut TourviaApp, ctx: &egui::Context) {
                 .inner_margin(egui::Margin::symmetric(20, 12))
                 .show(ui, |ui| {
                     ui.horizontal(|ui| {
-                        ui.label(RichText::new("Match Details").size(17.0).color(theme::TEXT_PRIMARY()).strong());
+                        ui.label(theme::heading_text("MATCH DETAILS").size(22.0));
                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                             if ui.add(egui::Button::new(RichText::new("X").size(14.0).color(theme::TEXT_MUTED()).strong())
                                 .fill(egui::Color32::TRANSPARENT)
@@ -35,6 +35,11 @@ pub fn render_modal(app: &mut TourviaApp, ctx: &egui::Context) {
                         });
                     });
                 });
+                
+            ui.scope(|ui| {
+                ui.visuals_mut().widgets.noninteractive.bg_stroke = egui::Stroke::new(2.0, theme::ACCENT_BRONZE());
+                ui.add(egui::Separator::default().horizontal().spacing(0.0));
+            });
 
             // === Body ===
             egui::Frame::new()
@@ -118,8 +123,9 @@ pub fn render_modal(app: &mut TourviaApp, ctx: &egui::Context) {
 
                             // Helper: placeholder
                             let draw_placeholder = |painter: &egui::Painter, cx: f32| {
-                                painter.circle_stroke(Pos2::new(cx, logo_cy), 20.0, Stroke::new(1.0, theme::BORDER_SUBTLE()));
-                                painter.text(Pos2::new(cx, logo_cy), Align2::CENTER_CENTER, "?", FontId::new(16.0, FontFamily::Proportional), theme::TEXT_MUTED());
+                                let rect = Rect::from_center_size(Pos2::new(cx, logo_cy), Vec2::new(40.0, 40.0));
+                                painter.rect_stroke(rect, 4.0, Stroke::new(1.0, theme::BORDER_SUBTLE()), StrokeKind::Inside);
+                                painter.text(Pos2::new(cx, logo_cy), Align2::CENTER_CENTER, "?", FontId::new(20.0, FontFamily::Name("Impact".into())), theme::TEXT_MUTED());
                             };
 
                             // Player 1 logo
@@ -137,8 +143,8 @@ pub fn render_modal(app: &mut TourviaApp, ctx: &egui::Context) {
                             if !p2_logo { draw_placeholder(&vp, col2_cx); }
 
                             // Player names
-                            vp.text(Pos2::new(col1_cx, name_y), Align2::CENTER_TOP, p1, FontId::new(13.0, FontFamily::Proportional), p1_color);
-                            vp.text(Pos2::new(col2_cx, name_y), Align2::CENTER_TOP, p2, FontId::new(13.0, FontFamily::Proportional), p2_color);
+                            vp.text(Pos2::new(col1_cx, name_y), Align2::CENTER_TOP, p1, FontId::new(14.0, FontFamily::Proportional), p1_color);
+                            vp.text(Pos2::new(col2_cx, name_y), Align2::CENTER_TOP, p2, FontId::new(14.0, FontFamily::Proportional), p2_color);
 
                             // Vertical separator lines
                             let sep_color = theme::BORDER_SUBTLE().linear_multiply(0.5);
@@ -149,53 +155,135 @@ pub fn render_modal(app: &mut TourviaApp, ctx: &egui::Context) {
 
                             // Center: VS or Score
                             if m.status == MatchStatus::Completed {
-                                vp.text(Pos2::new(center_cx, logo_cy), Align2::CENTER_CENTER, format!("{}  :  {}", m.score1, m.score2), FontId::new(26.0, FontFamily::Proportional), theme::TEXT_PRIMARY());
+                                vp.text(Pos2::new(center_cx, logo_cy), Align2::CENTER_CENTER, format!("{}  :  {}", m.score1, m.score2), FontId::new(32.0, FontFamily::Name("Impact".into())), theme::TEXT_PRIMARY());
                             } else {
-                                vp.text(Pos2::new(center_cx, logo_cy), Align2::CENTER_CENTER, "VS", FontId::new(18.0, FontFamily::Proportional), theme::TEXT_MUTED());
+                                vp.text(Pos2::new(center_cx, logo_cy), Align2::CENTER_CENTER, "VS", FontId::new(28.0, FontFamily::Name("Impact".into())), theme::ACCENT_BRONZE());
                             }
 
                             // Scores below names (for completed matches)
                             if m.status == MatchStatus::Completed {
-                                let circle_r = 16.0;
+                                let rect_w = 36.0;
+                                let rect_h = 28.0;
                                 let s1_bg = if w1 { theme::SUCCESS().linear_multiply(0.15) } else { theme::BG_ELEVATED() };
                                 let s2_bg = if w2 { theme::SUCCESS().linear_multiply(0.15) } else { theme::BG_ELEVATED() };
-                                vp.circle_filled(Pos2::new(col1_cx, score_y), circle_r, s1_bg);
-                                vp.circle_stroke(Pos2::new(col1_cx, score_y), circle_r, Stroke::new(1.0, if w1 { theme::SUCCESS() } else { theme::BORDER_SUBTLE() }));
-                                vp.text(Pos2::new(col1_cx, score_y), Align2::CENTER_CENTER, m.score1.to_string(), FontId::new(14.0, FontFamily::Proportional), p1_color);
+                                
+                                let rect1 = Rect::from_center_size(Pos2::new(col1_cx, score_y), Vec2::new(rect_w, rect_h));
+                                vp.rect_filled(rect1, 4.0, s1_bg);
+                                vp.rect_stroke(rect1, 4.0, Stroke::new(1.0, if w1 { theme::SUCCESS() } else { theme::BORDER_SUBTLE() }), StrokeKind::Inside);
+                                vp.text(Pos2::new(col1_cx, score_y), Align2::CENTER_CENTER, m.score1.to_string(), FontId::new(18.0, FontFamily::Name("Impact".into())), p1_color);
 
-                                vp.circle_filled(Pos2::new(col2_cx, score_y), circle_r, s2_bg);
-                                vp.circle_stroke(Pos2::new(col2_cx, score_y), circle_r, Stroke::new(1.0, if w2 { theme::SUCCESS() } else { theme::BORDER_SUBTLE() }));
-                                vp.text(Pos2::new(col2_cx, score_y), Align2::CENTER_CENTER, m.score2.to_string(), FontId::new(14.0, FontFamily::Proportional), p2_color);
+                                let rect2 = Rect::from_center_size(Pos2::new(col2_cx, score_y), Vec2::new(rect_w, rect_h));
+                                vp.rect_filled(rect2, 4.0, s2_bg);
+                                vp.rect_stroke(rect2, 4.0, Stroke::new(1.0, if w2 { theme::SUCCESS() } else { theme::BORDER_SUBTLE() }), StrokeKind::Inside);
+                                vp.text(Pos2::new(col2_cx, score_y), Align2::CENTER_CENTER, m.score2.to_string(), FontId::new(18.0, FontFamily::Name("Impact".into())), p2_color);
                             }
 
                             ui.add_space(16.0);
 
                             // === Score Entry (for in-progress matches) ===
-                            if m.status == MatchStatus::InProgress {
+                            if m.status == MatchStatus::Pending {
                                 ui.separator();
                                 ui.add_space(12.0);
-                                ui.label(RichText::new("Report Score").size(14.0).color(theme::TEXT_PRIMARY()).strong());
-                                ui.add_space(8.0);
-
-                                ui.columns(2, |cols| {
-                                    cols[0].vertical_centered(|ui| {
-                                        ui.label(RichText::new(p1).size(12.0).color(theme::TEXT_SECONDARY()));
-                                        ui.add_space(4.0);
-                                        ui.add(egui::TextEdit::singleline(&mut app.score_input[0]).desired_width(100.0).hint_text("Score").horizontal_align(egui::Align::Center));
+                                
+                                let players_ready = m.player1_id.is_some() && m.player2_id.is_some();
+                                let btn_text = if players_ready { "START MATCH" } else { "WAITING FOR OPPONENTS" };
+                                let btn_color = if players_ready { theme::SUCCESS() } else { theme::TEXT_MUTED().linear_multiply(0.2) };
+                                
+                                let btn = egui::Button::new(RichText::new(btn_text).font(egui::FontId::new(24.0, egui::FontFamily::Name("Impact".into()))).color(theme::BG_DARK()))
+                                    .fill(btn_color).corner_radius(theme::button_rounding())
+                                    .min_size(Vec2::new(ui.available_width(), 48.0));
+                                    
+                                if ui.add_enabled(players_ready, btn).clicked() {
+                                    app.start_match();
+                                }
+                            } else if m.status == MatchStatus::InProgress {
+                                ui.separator();
+                                ui.add_space(12.0);
+                                
+                                ui.horizontal(|ui| {
+                                    ui.label(theme::heading_text("LIVE MATCH CONTROLS").size(16.0));
+                                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                        let status_text = if app.show_broadcast_window { "OVERLAY: ON" } else { "OVERLAY: OFF" };
+                                        let bg_color = if app.show_broadcast_window { theme::SUCCESS() } else { theme::TEXT_MUTED() };
+                                        let toggle_btn = egui::Button::new(RichText::new(status_text).color(theme::BG_DARK()).strong())
+                                            .fill(bg_color)
+                                            .corner_radius(theme::badge_rounding());
+                                        if ui.add(toggle_btn).clicked() {
+                                            app.show_broadcast_window = !app.show_broadcast_window;
+                                        }
                                     });
+                                });
+                                ui.add_space(16.0);
+
+                                // Timer Controls
+                                egui::Frame::new().fill(theme::BG_ELEVATED()).corner_radius(4).inner_margin(egui::Margin::symmetric(16, 12)).show(ui, |ui| {
+                                    ui.horizontal(|ui| {
+                                        ui.label(RichText::new("TIMER").size(12.0).color(theme::TEXT_SECONDARY()).strong());
+                                        ui.add_space(8.0);
+                                        let mins = app.broadcast_timer_seconds / 60;
+                                        let secs = app.broadcast_timer_seconds % 60;
+                                        ui.label(RichText::new(format!("{:02}:{:02}", mins, secs)).font(egui::FontId::new(28.0, egui::FontFamily::Name("Impact".into()))).color(theme::ACCENT_BRONZE()));
+                                        
+                                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                            let btn_reset = egui::Button::new(RichText::new("RESET").size(12.0).color(theme::TEXT_PRIMARY())).fill(theme::BG_CARD()).corner_radius(theme::button_rounding()).min_size(Vec2::new(60.0, 32.0));
+                                            if ui.add(btn_reset).clicked() {
+                                                app.broadcast_timer_seconds = 0;
+                                                app.broadcast_timer_running = false;
+                                            }
+                                            let play_text = if app.broadcast_timer_running { "PAUSE" } else { "START" };
+                                            let play_color = if app.broadcast_timer_running { theme::WARNING() } else { theme::SUCCESS() };
+                                            let btn_play = egui::Button::new(RichText::new(play_text).size(12.0).color(theme::BG_DARK()).strong()).fill(play_color).corner_radius(theme::button_rounding()).min_size(Vec2::new(60.0, 32.0));
+                                            if ui.add(btn_play).clicked() {
+                                                app.broadcast_timer_running = !app.broadcast_timer_running;
+                                                if app.broadcast_timer_running {
+                                                    app.broadcast_timer_last_tick = None;
+                                                }
+                                            }
+                                        });
+                                    });
+                                });
+                                ui.add_space(16.0);
+
+                                // Live Score Controls
+                                ui.columns(2, |cols| {
+                                    // P1
+                                    cols[0].vertical_centered(|ui| {
+                                        ui.label(RichText::new(p1).size(14.0).color(theme::TEXT_SECONDARY()).strong());
+                                        ui.add_space(8.0);
+                                        ui.horizontal(|ui| {
+                                            ui.add_space(ui.available_width() / 2.0 - 56.0); // Center align manually
+                                            let btn_minus = egui::Button::new(RichText::new("-").font(egui::FontId::new(24.0, egui::FontFamily::Name("Impact".into())))).fill(theme::BG_ELEVATED()).corner_radius(theme::button_rounding()).min_size(Vec2::new(36.0, 36.0));
+                                            if ui.add(btn_minus).clicked() { app.update_live_score(-1, 0); }
+                                            ui.add_space(8.0);
+                                            ui.label(RichText::new(m.score1.to_string()).font(egui::FontId::new(36.0, egui::FontFamily::Name("Impact".into()))).color(theme::TEXT_PRIMARY()));
+                                            ui.add_space(8.0);
+                                            let btn_plus = egui::Button::new(RichText::new("+").font(egui::FontId::new(24.0, egui::FontFamily::Name("Impact".into())))).fill(theme::BG_ELEVATED()).corner_radius(theme::button_rounding()).min_size(Vec2::new(36.0, 36.0));
+                                            if ui.add(btn_plus).clicked() { app.update_live_score(1, 0); }
+                                        });
+                                    });
+                                    // P2
                                     cols[1].vertical_centered(|ui| {
-                                        ui.label(RichText::new(p2).size(12.0).color(theme::TEXT_SECONDARY()));
-                                        ui.add_space(4.0);
-                                        ui.add(egui::TextEdit::singleline(&mut app.score_input[1]).desired_width(100.0).hint_text("Score").horizontal_align(egui::Align::Center));
+                                        ui.label(RichText::new(p2).size(14.0).color(theme::TEXT_SECONDARY()).strong());
+                                        ui.add_space(8.0);
+                                        ui.horizontal(|ui| {
+                                            ui.add_space(ui.available_width() / 2.0 - 56.0); // Center align manually
+                                            let btn_minus = egui::Button::new(RichText::new("-").font(egui::FontId::new(24.0, egui::FontFamily::Name("Impact".into())))).fill(theme::BG_ELEVATED()).corner_radius(theme::button_rounding()).min_size(Vec2::new(36.0, 36.0));
+                                            if ui.add(btn_minus).clicked() { app.update_live_score(0, -1); }
+                                            ui.add_space(8.0);
+                                            ui.label(RichText::new(m.score2.to_string()).font(egui::FontId::new(36.0, egui::FontFamily::Name("Impact".into()))).color(theme::TEXT_PRIMARY()));
+                                            ui.add_space(8.0);
+                                            let btn_plus = egui::Button::new(RichText::new("+").font(egui::FontId::new(24.0, egui::FontFamily::Name("Impact".into())))).fill(theme::BG_ELEVATED()).corner_radius(theme::button_rounding()).min_size(Vec2::new(36.0, 36.0));
+                                            if ui.add(btn_plus).clicked() { app.update_live_score(0, 1); }
+                                        });
                                     });
                                 });
 
-                                ui.add_space(12.0);
+                                ui.add_space(16.0);
 
-                                if ui.add(egui::Button::new(RichText::new("Submit Match Result").size(13.0).color(theme::BG_DARK()).strong())
-                                    .fill(theme::ACCENT_BRONZE()).corner_radius(theme::button_rounding())
-                                    .min_size(Vec2::new(ui.available_width(), 36.0))).clicked() {
-                                    app.submit_match_score();
+                                if ui.add(egui::Button::new(RichText::new("END MATCH & SAVE").font(egui::FontId::new(20.0, egui::FontFamily::Name("Impact".into()))).color(egui::Color32::WHITE))
+                                    .fill(theme::ERROR().linear_multiply(0.85)).corner_radius(theme::button_rounding())
+                                    .min_size(Vec2::new(ui.available_width(), 40.0))).clicked() {
+                                    app.end_match();
                                 }
                             }
                         }

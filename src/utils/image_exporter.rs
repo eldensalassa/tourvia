@@ -32,11 +32,33 @@ const SUCCESS: Rgba<u8>       = Rgba([16, 185, 129, 255]);
 const GOLD: Rgba<u8>          = Rgba([212, 175, 55, 255]);
 const WARNING: Rgba<u8>       = Rgba([245, 158, 11, 255]);
 
-/// Load a font from the Windows system fonts directory.
+/// Load a font from system fonts directory (cross-platform fallback).
 fn load_font() -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    std::fs::read("C:\\Windows\\Fonts\\arial.ttf")
-        .or_else(|_| std::fs::read("C:\\Windows\\Fonts\\segoeui.ttf"))
-        .map_err(|e| e.into())
+    let font_paths = [
+        // Windows
+        "C:\\Windows\\Fonts\\arial.ttf",
+        "C:\\Windows\\Fonts\\segoeui.ttf",
+        "C:\\Windows\\Fonts\\tahoma.ttf",
+        // macOS
+        "/Library/Fonts/Arial.ttf",
+        "/System/Library/Fonts/Helvetica.ttc",
+        "/System/Library/Fonts/Supplemental/Arial.ttf",
+        // Linux (Ubuntu, Debian, Arch, Fedora)
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        "/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf",
+        "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
+        "/usr/share/fonts/gnu-free/FreeSans.ttf",
+        "/usr/share/fonts/dejavu/DejaVuSans.ttf",
+    ];
+
+    for path in &font_paths {
+        if let Ok(data) = std::fs::read(path) {
+            return Ok(data);
+        }
+    }
+    
+    Err("No suitable font found on the system. Please ensure standard fonts are installed.".into())
 }
 
 /// Draw a filled rounded-corner rectangle. We approximate rounded corners

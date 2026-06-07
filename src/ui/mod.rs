@@ -9,3 +9,5 @@ pub mod scoreboard_view;
 pub mod notifications;
 pub mod global_roster;
 pub mod image_picker;
+pub mod components;
+pub mod broadcast_overlay;

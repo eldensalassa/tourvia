@@ -444,55 +444,122 @@ fn render_operator_bar(app: &mut TourviaApp, ui: &mut egui::Ui) {
                 .color(theme::TEXT_SECONDARY()),
             );
 
-            if m.status == MatchStatus::InProgress {
-                ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
-                    if ui
-                        .add(
-                            egui::Button::new(
-                                RichText::new("Submit Result")
-                                    .size(12.0)
-                                    .color(theme::BG_DARK())
-                                    .strong(),
-                            )
-                            .fill(theme::ACCENT_BRONZE()),
+            match m.status {
+                MatchStatus::Pending => {
+                    let players_ready = m.player1_id.is_some() && m.player2_id.is_some();
+                    ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
+                        let label = if players_ready {
+                            "Start Match"
+                        } else {
+                            "Waiting For Opponents"
+                        };
+                        let button = egui::Button::new(
+                            RichText::new(label)
+                                .size(12.0)
+                                .color(theme::BG_DARK())
+                                .strong(),
                         )
-                        .clicked()
-                    {
-                        app.selected_match = Some(m.id.clone());
-                        app.submit_match_score();
-                    }
+                        .fill(if players_ready {
+                            theme::SUCCESS()
+                        } else {
+                            theme::TEXT_MUTED()
+                        });
 
-                    ui.add(
-                        egui::TextEdit::singleline(&mut app.score_input[1])
-                            .desired_width(60.0)
-                            .hint_text("P2"),
-                    );
-                    ui.label(
-                        RichText::new(player_name(&m.player2_name))
-                            .size(12.0)
-                            .color(theme::TEXT_MUTED()),
-                    );
-                    ui.add(
-                        egui::TextEdit::singleline(&mut app.score_input[0])
-                            .desired_width(60.0)
-                            .hint_text("P1"),
-                    );
-                    ui.label(
-                        RichText::new(player_name(&m.player1_name))
-                            .size(12.0)
-                            .color(theme::TEXT_MUTED()),
-                    );
-                });
-            } else {
-                ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
-                    ui.label(
-                        RichText::new("Score entry is available for live matches.")
-                            .size(12.0)
-                            .color(theme::TEXT_MUTED()),
-                    );
-                });
+                        if ui.add_enabled(players_ready, button).clicked() {
+                            app.selected_match = Some(m.id.clone());
+                            app.start_match();
+                        }
+                    });
+                }
+                MatchStatus::InProgress => {
+                    ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
+                        if ui
+                            .add(
+                                egui::Button::new(
+                                    RichText::new("End Match & Save")
+                                        .size(12.0)
+                                        .color(egui::Color32::WHITE)
+                                        .strong(),
+                                )
+                                .fill(theme::ERROR().linear_multiply(0.85)),
+                            )
+                            .clicked()
+                        {
+                            app.selected_match = Some(m.id.clone());
+                            app.end_match();
+                        }
+
+                        score_stepper(ui, app, &m.id, &m.player2_name, m.score2, 0, 1);
+                        ui.add_space(10.0);
+                        score_stepper(ui, app, &m.id, &m.player1_name, m.score1, 1, 0);
+                    });
+                }
+                MatchStatus::Completed => {
+                    ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
+                        ui.label(
+                            RichText::new("Final result saved.")
+                                .size(12.0)
+                                .color(theme::SUCCESS()),
+                        );
+                    });
+                }
+                MatchStatus::Bye => {
+                    ui.with_layout(egui::Layout::right_to_left(Align::Center), |ui| {
+                        ui.label(
+                            RichText::new("Bye match.")
+                                .size(12.0)
+                                .color(theme::TEXT_MUTED()),
+                        );
+                    });
+                }
             }
         }
+    });
+}
+
+fn score_stepper(
+    ui: &mut egui::Ui,
+    app: &mut TourviaApp,
+    match_id: &str,
+    player: &str,
+    score: i32,
+    p1_delta: i32,
+    p2_delta: i32,
+) {
+    ui.horizontal(|ui| {
+        if ui
+            .add(
+                egui::Button::new(RichText::new("+").size(14.0).strong())
+                    .fill(theme::BG_ELEVATED())
+                    .min_size(Vec2::new(28.0, 28.0)),
+            )
+            .clicked()
+        {
+            app.selected_match = Some(match_id.to_owned());
+            app.update_live_score(p1_delta, p2_delta);
+        }
+        ui.label(
+            RichText::new(score.to_string())
+                .size(16.0)
+                .color(theme::TEXT_PRIMARY())
+                .strong(),
+        );
+        if ui
+            .add(
+                egui::Button::new(RichText::new("-").size(14.0).strong())
+                    .fill(theme::BG_ELEVATED())
+                    .min_size(Vec2::new(28.0, 28.0)),
+            )
+            .clicked()
+        {
+            app.selected_match = Some(match_id.to_owned());
+            app.update_live_score(-p1_delta, -p2_delta);
+        }
+        ui.label(
+            RichText::new(player_name(player))
+                .size(12.0)
+                .color(theme::TEXT_MUTED()),
+        );
     });
 }
 

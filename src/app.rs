@@ -905,20 +905,24 @@ impl eframe::App for TourviaApp {
 
                 // Content area (based on selected tab)
                 egui::CentralPanel::default()
-                    .frame(egui::Frame::new().fill(ui::theme::BG_DARK()).inner_margin(egui::Margin::same(24)))
+                    .frame(egui::Frame::new().fill(ui::theme::BG_DARK()).inner_margin(egui::Margin::same(0)))
                     .show(ctx, |ui| {
                         match self.active_tab {
                             TournamentTab::Overview => {
                                 ui::tournament_overview::render(self, ui);
                             }
                             TournamentTab::Participants => {
-                                ui::participant_panel::render(self, ui, &ctx_clone);
+                                egui::Frame::NONE.inner_margin(egui::Margin::same(24)).show(ui, |ui| {
+                                    ui::participant_panel::render(self, ui, &ctx_clone);
+                                });
                             }
                             TournamentTab::Bracket => {
                                 ui::bracket_view::render(self, ui);
                             }
                             TournamentTab::Standings => {
-                                ui::stats_panel::render(self, ui);
+                                egui::Frame::NONE.inner_margin(egui::Margin::same(24)).show(ui, |ui| {
+                                    ui::stats_panel::render(self, ui);
+                                });
                             }
                         }
                     });

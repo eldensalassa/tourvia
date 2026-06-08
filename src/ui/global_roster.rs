@@ -14,13 +14,15 @@ pub fn render(app: &mut TourviaApp, ui: &mut egui::Ui) {
 
 fn render_list(app: &mut TourviaApp, ui: &mut egui::Ui) {
     egui::SidePanel::left("db_sidebar")
-        .frame(egui::Frame::new().fill(theme::BG_PANEL()).inner_margin(egui::Margin::same(20)).stroke(egui::Stroke::new(1.0, theme::BORDER_SUBTLE())))
+        .frame(egui::Frame::new().fill(theme::BG_PANEL()).stroke(egui::Stroke::new(1.0, theme::BORDER_SUBTLE())))
         .min_width(320.0)
         .max_width(320.0)
         .show_inside(ui, |ui| {
-            // Manage Games section
-            ui.label(theme::heading_text("Manage Games"));
-            ui.add_space(16.0);
+            egui::ScrollArea::vertical().id_salt("db_sidebar_scroll").show(ui, |ui| {
+                egui::Frame::NONE.inner_margin(egui::Margin::same(20)).show(ui, |ui| {
+                // Manage Games section
+                ui.label(theme::heading_text("Manage Games"));
+                ui.add_space(16.0);
             
             ui.label(RichText::new("Game Name").color(theme::TEXT_MUTED()).size(13.0));
             ui.add_space(4.0);
@@ -184,6 +186,8 @@ fn render_list(app: &mut TourviaApp, ui: &mut egui::Ui) {
                     }
                 }
             }
+                });
+            });
         });
 
     egui::CentralPanel::default()
@@ -259,8 +263,16 @@ fn render_list(app: &mut TourviaApp, ui: &mut egui::Ui) {
                                         );
                                         
                                         if let Some(texture) = app.logo_textures.get(&r.id) {
-                                            let img = egui::Image::new(texture).fit_to_exact_size(Vec2::new(72.0, 72.0)).corner_radius(36.0);
-                                            ui.put(logo_rect, img);
+                                            let size = texture.size_vec2();
+                                            let aspect = if size.y > 0.0 { size.x / size.y } else { 1.0 };
+                                            let (w, h) = if aspect > 1.0 {
+                                                (72.0, 72.0 / aspect)
+                                            } else {
+                                                (72.0 * aspect, 72.0)
+                                            };
+                                            let img_rect = egui::Rect::from_center_size(logo_rect.center(), Vec2::new(w, h));
+                                            let img = egui::Image::new(texture).fit_to_exact_size(Vec2::new(w, h)).corner_radius(8.0);
+                                            ui.put(img_rect, img);
                                         } else {
                                             ui.painter().circle_filled(logo_rect.center(), 36.0, theme::BG_DARK());
                                             ui.painter().text(logo_rect.center(), egui::Align2::CENTER_CENTER, "🛡", egui::FontId::proportional(32.0), theme::TEXT_MUTED());
@@ -334,10 +346,12 @@ fn render_detail(app: &mut TourviaApp, ui: &mut egui::Ui) {
     
     // --- SIDE PANEL ---
     egui::SidePanel::left("detail_sidebar")
-        .frame(egui::Frame::new().fill(theme::BG_PANEL()).inner_margin(egui::Margin::same(20)).stroke(egui::Stroke::new(1.0, theme::BORDER_SUBTLE())))
+        .frame(egui::Frame::new().fill(theme::BG_PANEL()).stroke(egui::Stroke::new(1.0, theme::BORDER_SUBTLE())))
         .min_width(320.0)
         .max_width(320.0)
         .show_inside(ui, |ui| {
+            egui::ScrollArea::vertical().id_salt("detail_sidebar_scroll").show(ui, |ui| {
+                egui::Frame::NONE.inner_margin(egui::Margin::same(20)).show(ui, |ui| {
             // BACK BUTTON
             let input_fill = ui.visuals().extreme_bg_color;
             if ui.add(egui::Button::new(RichText::new("⬅ Back to Database").color(theme::TEXT_PRIMARY()))
@@ -532,6 +546,8 @@ fn render_detail(app: &mut TourviaApp, ui: &mut egui::Ui) {
                     }
                 }
             }
+                });
+            });
         });
 
     // --- CENTRAL PANEL ---

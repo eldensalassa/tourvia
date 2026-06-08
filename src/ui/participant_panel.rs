@@ -208,7 +208,11 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui, _ctx: &egui::Context) {
                                     child_ui.allocate_ui(Vec2::new(50.0, 46.0), |ui| {
                                         ui.centered_and_justified(|ui| {
                                             if let Some(tex) = app.logo_textures.get(&p.id) {
-                                                ui.add(egui::Image::new(tex).fit_to_exact_size(Vec2::new(32.0, 32.0)).corner_radius(4));
+                                                let size = tex.size_vec2();
+                                                let aspect = if size.y > 0.0 { size.x / size.y } else { 1.0 };
+                                                let w = if aspect > 1.0 { 32.0 } else { 32.0 * aspect };
+                                                let h = if aspect > 1.0 { 32.0 / aspect } else { 32.0 };
+                                                ui.add(egui::Image::new(tex).fit_to_exact_size(Vec2::new(w, h)).corner_radius(4));
                                             } else {
                                                 ui.label(RichText::new("—").color(theme::TEXT_MUTED()));
                                             }
@@ -256,7 +260,11 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui, _ctx: &egui::Context) {
                         child_ui.allocate_ui(Vec2::new(50.0, 46.0), |ui| {
                             ui.centered_and_justified(|ui| {
                                 if let Some(tex) = app.logo_textures.get(&p.id) {
-                                    ui.add(egui::Image::new(tex).fit_to_exact_size(Vec2::new(32.0, 32.0)).corner_radius(4));
+                                    let size = tex.size_vec2();
+                                    let aspect = if size.y > 0.0 { size.x / size.y } else { 1.0 };
+                                    let w = if aspect > 1.0 { 32.0 } else { 32.0 * aspect };
+                                    let h = if aspect > 1.0 { 32.0 / aspect } else { 32.0 };
+                                    ui.add(egui::Image::new(tex).fit_to_exact_size(Vec2::new(w, h)).corner_radius(4));
                                 } else {
                                     ui.label(RichText::new("—").color(theme::TEXT_MUTED()));
                                 }
@@ -324,7 +332,11 @@ pub fn render_preview_modal(app: &mut TourviaApp, ctx: &egui::Context) {
                     
                     ui.vertical_centered(|ui| {
                         if let Some(tex) = app.logo_textures.get(&roster.id) {
-                            ui.add(egui::Image::new(tex).fit_to_exact_size(Vec2::new(80.0, 80.0)).corner_radius(8));
+                            let size = tex.size_vec2();
+                            let aspect = if size.y > 0.0 { size.x / size.y } else { 1.0 };
+                            let w = if aspect > 1.0 { 80.0 } else { 80.0 * aspect };
+                            let h = if aspect > 1.0 { 80.0 / aspect } else { 80.0 };
+                            ui.add(egui::Image::new(tex).fit_to_exact_size(Vec2::new(w, h)).corner_radius(8));
                         }
                         ui.add_space(8.0);
                         ui.label(RichText::new(&roster.name).font(egui::FontId::proportional(24.0)).strong().color(theme::TEXT_PRIMARY()));
@@ -373,7 +385,11 @@ pub fn render_preview_modal(app: &mut TourviaApp, ctx: &egui::Context) {
                                         ui.set_min_width(ui.available_width());
                                         ui.horizontal(|ui| {
                                             if let Some(tex) = app.member_photo_textures.get(&member.id) {
-                                                ui.add(egui::Image::new(tex).fit_to_exact_size(Vec2::new(32.0, 32.0)).corner_radius(4));
+                                                let size = tex.size_vec2();
+                                                let aspect = if size.y > 0.0 { size.x / size.y } else { 1.0 };
+                                                let w = if aspect > 1.0 { 32.0 } else { 32.0 * aspect };
+                                                let h = if aspect > 1.0 { 32.0 / aspect } else { 32.0 };
+                                                ui.add(egui::Image::new(tex).fit_to_exact_size(Vec2::new(w, h)).corner_radius(4));
                                             } else {
                                                 let (rect, _) = ui.allocate_exact_size(Vec2::new(32.0, 32.0), egui::Sense::hover());
                                                 ui.painter().rect_filled(rect, 4.0, theme::BG_CARD_HOVER());

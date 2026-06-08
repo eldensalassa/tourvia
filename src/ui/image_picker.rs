@@ -309,11 +309,17 @@ fn trigger_search(app: &mut TourviaApp) {
         }
     }
     
-    // Explicitly append liquipedia to force Bing to search there
-    if !query.to_lowercase().contains("liquipedia") && !query.to_lowercase().contains("wikipedia") {
-        query.push_str(" liquipedia");
+    let is_logo = matches!(
+        app.image_picker_target,
+        Some(crate::app::ImageTarget::NewRosterLogo)
+            | Some(crate::app::ImageTarget::ExistingRosterLogo(_))
+            | Some(crate::app::ImageTarget::NewTournamentLogo)
+    );
+    
+    if is_logo && !query.to_lowercase().contains("logo") && !query.to_lowercase().contains("png") {
+        query.push_str(" png logo");
     }
-
+    
     let (tx, rx) = std::sync::mpsc::channel();
     app.image_fetch_rx = Some(rx);
 
@@ -426,9 +432,18 @@ fn render_image_grid(app: &mut TourviaApp, ui: &mut egui::Ui) {
                     );
                     
                     if let Some(texture) = app.image_picker_thumbnails.get(&item.thumbnail) {
+                        let size = texture.size_vec2();
+                        let aspect = if size.y > 0.0 { size.x / size.y } else { 1.0 };
+                        let (w, h) = if aspect > 1.0 {
+                            (thumb_rect.width(), thumb_rect.width() / aspect)
+                        } else {
+                            (thumb_rect.height() * aspect, thumb_rect.height())
+                        };
+                        let draw_rect = egui::Rect::from_center_size(thumb_rect.center(), Vec2::new(w, h));
+                        
                         ui.painter().image(
                             texture.id(),
-                            thumb_rect,
+                            draw_rect,
                             egui::Rect::from_min_max(egui::pos2(0.0, 0.0), egui::pos2(1.0, 1.0)),
                             egui::Color32::WHITE
                         );

@@ -56,13 +56,14 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
         return;
     };
 
-    let counts = MatchCounts::from_matches(&app.matches);
-    let focus_match = focus_match(&app.matches);
-    let champion = app.champion.clone();
+    let counts = if tournament.status == TournamentStatus::Draft { MatchCounts::from_matches(&[]) } else { MatchCounts::from_matches(&app.matches) };
+    let focus_match = if tournament.status == TournamentStatus::Draft { None } else { focus_match(&app.matches) };
+    let champion = if tournament.status == TournamentStatus::Draft { None } else { app.champion.clone() };
 
     egui::ScrollArea::vertical()
         .auto_shrink([false, false])
         .show(ui, |ui| {
+            egui::Frame::NONE.inner_margin(egui::Margin::same(24)).show(ui, |ui| {
             render_summary(app, ui, &tournament, &counts, champion.as_ref());
             ui.add_space(14.0);
 
@@ -107,6 +108,7 @@ pub fn render(app: &mut TourviaApp, ui: &mut Ui) {
                     });
                 }
             }
+            });
         });
 }
 
@@ -143,7 +145,7 @@ fn render_summary(
                     });
 
                     ui.add_space(8.0);
-                    if let Some((name, _id)) = champion {
+                    if let Some((_id, name)) = champion {
                         ui.label(
                             RichText::new(format!("Champion: {}", name))
                                 .size(14.0)
@@ -308,7 +310,7 @@ fn render_match_card(
                             .strong(),
                     );
                 }
-            } else if let Some((name, _id)) = champion {
+            } else if let Some((_id, name)) = champion {
                 ui.label(RichText::new("Tournament complete").size(13.0).color(theme::TEXT_SECONDARY()));
                 ui.add_space(8.0);
                 ui.label(theme::champion_text(name));

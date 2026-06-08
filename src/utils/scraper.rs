@@ -11,20 +11,76 @@ pub struct ScrapedImage {
 
 /// Scrape image results from Bing Images (lightweight, doesn't block as aggressively as Google).
 pub fn fetch_images_bing(query: &str) -> Result<Vec<ScrapedImage>, String> {
+    let (tx, rx) = std::sync::mpsc::channel();
+    
+    let queries = vec![
+        format!("{} liquipedia", query),
+        query.to_string(),
+        format!("{} wikipedia", query),
+    ];
+    
+    for q in queries {
+        let tx_clone = tx.clone();
+        std::thread::spawn(move || {
+            let res = fetch_images_bing_single(&q);
+            let _ = tx_clone.send(res);
+        });
+    }
+    
+    drop(tx);
+    
+    let mut all_results = Vec::new();
+    let mut seen_urls = std::collections::HashSet::new();
+    
+    for res in rx {
+        if let Ok(items) = res {
+            for item in items {
+                if !seen_urls.contains(&item.url) {
+                    seen_urls.insert(item.url.clone());
+                    all_results.push(item);
+                }
+            }
+        }
+    }
+    
+    if all_results.is_empty() {
+        return Err("No images found. Try a different query.".to_string());
+    }
+
+    // Sort to prioritize liquipedia first, then other wikis, then the rest
+    let mut liquipedia_results: Vec<ScrapedImage> = Vec::new();
+    let mut wiki_results: Vec<ScrapedImage> = Vec::new();
+    let mut other_results: Vec<ScrapedImage> = Vec::new();
+
+    for r in all_results {
+        if r.url.contains("liquipedia.net") {
+            liquipedia_results.push(r);
+        } else if r.url.contains("wikipedia.org") 
+            || r.url.contains("wikimedia.org")
+            || r.url.contains("fandom.com") {
+            wiki_results.push(r);
+        } else {
+            other_results.push(r);
+        }
+    }
+
+    liquipedia_results.extend(wiki_results);
+    liquipedia_results.extend(other_results);
+    liquipedia_results.truncate(30);
+
+    Ok(liquipedia_results)
+}
+
+fn fetch_images_bing_single(query: &str) -> Result<Vec<ScrapedImage>, String> {
     let client = Client::builder()
         .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36")
         .timeout(std::time::Duration::from_secs(15))
         .build()
         .map_err(|e| format!("HTTP client error: {}", e))?;
 
-    let mut search_query = query.to_string();
-    if !search_query.to_lowercase().contains("png") {
-        search_query.push_str(" png logo");
-    }
-
     let url = format!(
         "https://www.bing.com/images/search?q={}&form=HDRSC2&first=1",
-        urlencoding::encode(&search_query)
+        urlencoding::encode(query)
     );
 
     let html = client
@@ -78,30 +134,7 @@ pub fn fetch_images_bing(query: &str) -> Result<Vec<ScrapedImage>, String> {
         if results.len() >= 20 { break; }
     }
 
-    // Sort to prioritize liquipedia, wikipedia, and fandom
-    let mut wiki_results: Vec<ScrapedImage> = Vec::new();
-    let mut other_results: Vec<ScrapedImage> = Vec::new();
-
-    for r in results {
-        let is_wiki = r.url.contains("liquipedia.net") 
-            || r.url.contains("wikipedia.org") 
-            || r.url.contains("wikimedia.org")
-            || r.url.contains("fandom.com");
-            
-        if is_wiki {
-            wiki_results.push(r);
-        } else {
-            other_results.push(r);
-        }
-    }
-
-    wiki_results.extend(other_results);
-
-    if !wiki_results.is_empty() {
-        Ok(wiki_results)
-    } else {
-        Err("No images found. Try a different query.".to_string())
-    }
+    Ok(results)
 }
 
 /// Download an image from a URL and return the raw bytes.

@@ -7,17 +7,20 @@
   [![Rust](https://img.shields.io/badge/rust-%23000000.svg?style=for-the-badge&logo=rust&logoColor=white)](#)
   [![egui](https://img.shields.io/badge/egui-GUI-%23ff69b4.svg?style=for-the-badge)](#)
   [![SQLite](https://img.shields.io/badge/sqlite-%2307405e.svg?style=for-the-badge&logo=sqlite&logoColor=white)](#)
+  [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0)
+  <br/>
+  <p><i>Copyright (c) 2026 Elden Salassa'. This program is free software licensed under the GNU General Public License v3.0. See the <a href="LICENSE">GNU General Public License</a> for more details.</i></p>
 </div>
-
 ---
 
 Tourvia is a *Native Desktop* application developed using the **Rust** programming language and the **egui** framework. This application is designed to visually and interactively streamline the management process of *esports* or other sports tournaments.
 
 ## 🚀 Key Features
 
-- **🏆 Smart Bracket System**: Fully supports **Single Elimination**. **Double Elimination** (with Upper/Lower Brackets) and **Round Robin** formats. Automatically routes match winners, losers, and calculates *BYE* scenarios.
+- **🏆 Smart Bracket System**: Fully supports **Single Elimination**, **Double Elimination** (with Upper/Lower Brackets) and **Round Robin** formats. Automatically routes match winners, losers, and calculates *BYE* scenarios.
 - **👥 Global Roster & Team Management**: Register teams once in the *Global Roster* system and reuse them across multiple tournaments. Full support for uploading high-resolution team logos (PNG/JPG).
-- **🌐 Built-in Web Image Scraper**: No need to download logos manually! Tourvia includes an integrated image search scraper to directly find and apply team logos from the web straight into your roster.
+- **🌐 Advanced Parallel Image Scraper**: No need to download logos manually! Tourvia includes a smart, parallel image search scraper (querying Liquipedia, Wikipedia, and raw search simultaneously) to find the most accurate PNG team logos from the web.
+- **✨ Smart Aspect-Ratio Rendering**: All team logos and member photos are dynamically scaled and perfectly centered inside their containers without squashing or stretching.
 - **📊 Real-time Standings & Statistics**: Automatically calculates standings for the *Round Robin* format (Wins, Losses, Game Differentials). Interactive dashboard displays win ratios and total matches.
 - **📸 High-Quality Bracket Export**: Share your tournament results! Export your giant tournament brackets into high-resolution PNG image formats with just a single click.
 - **🔍 Pan & Zoom Navigation**: The diagram area (*Bracket*) is equipped with free-pan navigation and *zoom-in / zoom-out* controls to easily traverse large-scale tournament brackets.
@@ -87,6 +90,9 @@ This application uses a simplified *Domain-Driven* architectural pattern:
 - `src/utils/`: Additional utilities such as the PNG image export logic.
 
 ---
+
+
+
 <div align="center">
-  <i>Created by the Tourvia Team</i>
+  <i>Made with ❤️ and countless cups of coffee</i>
 </div>
